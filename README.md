@@ -39,7 +39,7 @@ try{
 const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 const timestamp = new Date();
 
-const year = safe_(data.year) || '2569';
+const year = safe_(data.year) || '2570';
 const centerName = safe_(data.centerName || data.center);
 const communityName = safe_(data.communityName || data.community);
 
