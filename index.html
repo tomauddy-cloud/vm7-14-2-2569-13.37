@@ -1,1851 +1,328 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบสำรวจสัตว์ งานสัตวแพทย์</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
 <style>
-body { font-family: "Sarabun", Arial, sans-serif; background:#f4f6fb; margin:0; }
-header { background:#fff; padding:20px; text-align:center; border-bottom:4px solid #2c3e90; }
-main { max-width:900px; margin:30px auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 6px 15px rgba(0,0,0,.1); }
-.center-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; }
-.center-card { border:1px solid #ddd; border-radius:8px; padding:15px; text-align:center; background:#f9fafc; }
-.center-card button { margin-top:10px; padding:10px 18px; background:#2c3e90; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-label { display:block; margin-top:10px; }
-input, select { width:100%; padding:6px; margin-top:4px; }
-.pet-card { border:1px solid #ccc; padding:10px; margin-top:10px; border-radius:6px; }
-footer { text-align:center; padding:15px; color:#666; font-size:14px; }
+body {
+    font-family: "Sarabun", Arial, sans-serif;
+    background: #f4f6fb;
+    margin: 0;
+    color: #222;
+}
+
+header {
+    background: #fff;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 4px solid #2c3e90;
+}
+
+header h1 { margin: 0; font-size: 26px; }
+header h2 { margin: 5px 0 0; font-size: 20px; font-weight: normal; }
+header h3 { margin: 10px 0 0; font-size: 18px; }
+header p { margin: 0; font-size: 16px; }
+
+main {
+    max-width: 900px;
+    margin: 30px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 6px 15px rgba(0,0,0,.1);
+    box-sizing: border-box;
+}
+
+.center-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.center-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    background: #f9fafc;
+}
+
+.center-card button {
+    margin-top: 10px;
+    padding: 10px 18px;
+    background: #2c3e90;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.center-card button:hover {
+    background: #1d2b70;
+}
+
+label {
+    display: block;
+    margin-top: 10px;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    box-sizing: border-box;
+}
+
+.pet-card {
+    border: 1px solid #ccc;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+.pet-card input,
+.pet-card select {
+    margin-bottom: 6px;
+}
+
+footer {
+    text-align: center;
+    padding: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* ==================== ระบบเปลี่ยนหน้า ==================== */
+
+#formPage {
+    display: none;
+}
+
+/* ซ่อนหน้าเลือกศูนย์เมื่อเข้าหน้าฟอร์ม */
+#centerPage.page-hidden,
+#formPage.page-hidden {
+    display: none !important;
+}
+
+#centerPage.page-visible,
+#formPage.page-visible {
+    display: block !important;
+}
+
+/* ==================== ปุ่ม ==================== */
+
+.page-button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.back-button {
+    background: #777;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+.save-button {
+    margin-top: 15px;
+    padding: 12px 24px;
+    background: #2c3e90;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.save-button:hover {
+    background: #1d2b70;
+}
+
+.status {
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+.photo-preview {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #2c3e90;
+    display: none;
+    margin: 8px auto;
+}
+
+.owner-photo-wrap {
+    margin: 15px 0;
+    text-align: center;
+}
+
+@media(max-width:600px) {
+    header {
+        padding: 15px 10px;
+    }
+
+    header h1 {
+        font-size: 20px;
+    }
+
+    header h2 {
+        font-size: 16px;
+    }
+
+    header h3 {
+        font-size: 16px;
+    }
+
+    header p {
+        font-size: 14px;
+    }
+
+    main {
+        margin: 15px 10px;
+        padding: 20px 15px;
+    }
+}
 </style>
 </head>
+
 <body>
+
 <header>
-  <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;">
-    
-    <div style="text-align:center;">
-      <div style="border-bottom:2px solid #2c3e90; padding-bottom:10px; margin-bottom:10px;">
-        <h1 style="margin:0;font-size:26px;">เทศบาลนครอุบลราชธานี</h1>
-        <h2 style="margin:5px 0 0;font-size:20px;font-weight:normal;">กองสาธารณสุขและสิ่งแวดล้อม ฝ่ายบริการสาธารณสุข</h2>
-      </div>
-      <div>
-        <h3 style="margin:5px 0 0;font-size:18px;">งานสัตวแพทย์</h3>
-        <p style="margin:0;font-size:16px;">แบบสำรวจสัตว์ ประจำปีงบประมาณ 2569</p>
-      </div>
-    </div>
-  </div>
+    <h1>เทศบาลนครอุบลราชธานี</h1>
+    <h2>กองสาธารณสุขและสิ่งแวดล้อม ฝ่ายบริการสาธารณสุข</h2>
+    <h3>งานสัตวแพทย์</h3>
+    <p>แบบสำรวจสัตว์ ประจำปีงบประมาณ 2569</p>
 </header>
 
+<!-- =====================================================
+     หน้า 1 : เลือกศูนย์
+===================================================== -->
+
+<div id="centerPage" class="page-visible">
+
 <main>
-<h2 style="text-align:center">เลือกศูนย์บริการสาธารณสุขตามสถานที่อยู่เจ้าของสัตว์</h2>
+
+<h2 style="text-align:center">
+    เลือกศูนย์บริการสาธารณสุขตามสถานที่อยู่เจ้าของสัตว์
+</h2>
+
 <div class="center-list">
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 1<br><button type="button" onclick="openForm(1)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 2<br><button type="button" onclick="openForm(2)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 3<br><button type="button" onclick="openForm(3)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 4<br><button type="button" onclick="openForm(4)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 5<br><button type="button" onclick="openForm(5)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 6<br><button type="button" onclick="openForm(6)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
-  <div class="center-card">ศูนย์บริการสาธารณสุขศูนย์ที่ 7<br><button type="button" onclick="openForm(7)">กดเริ่มสำรวจเพื่อกรอกข้อมูลด้านล่าง</button></div>
+
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 1
+    <br>
+    <button type="button" onclick="openForm(1)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
 </div>
 
-<div id="formSection" style="display:none; margin-top:40px;">
-<h2>แบบฟอร์มสำรวจสัตว์</h2>
-<p id="centerLabel" style="font-weight:bold;color:#2c3e90"></p>
-<form id="surveyForm">
-<input type="hidden" id="centerId"><input type="hidden" id="centerName">
-
-<label>ปีงบประมาณ</label>
-<input type="number" id="year" value="2569" required>
-
-<label>ชุมชน</label>
-<input type="text" id="community" placeholder="กรอกชื่อชุมชน" required>
-
-<label>ประเภทสัตว์</label>
-<select id="animalType" required>
-  <option value="">-- เลือก --</option>
-  <option>ไม่มี</option>
-  <option>สุนัข</option><option>แมว</option><option>โค</option><option>เป็ด</option><option>ไก่</option><option>สุกร</option><option>นก</option><option>แพะ</option><option>ม้า</option><option value="อื่นๆโปรดระบุ">อื่น ๆ โปรดระบุ</option>
-</select> 
-
-<div id="otherAnimalBox" style="display:none; margin-top:10px;">
-  <label>ระบุชนิดสัตว์</label>
-  <input type="text" id="otherAnimalType" placeholder="เช่น กระต่าย, เต่า">
-
-  <label>ระบุจำนวน</label>
-  <input type="number" id="otherAnimalQty" min="1">
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 2
+    <br>
+    <button type="button" onclick="openForm(2)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
 </div>
 
-<div id="petQtyBox">
-  <label>จำนวนสัตว์เลี้ยง</label>
-  <input type="number" id="petQty" min="0" max="100" value="0">
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 3
+    <br>
+    <button type="button" onclick="openForm(3)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
 </div>
 
-<div id="petList"></div>
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 4
+    <br>
+    <button type="button" onclick="openForm(4)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
+</div>
 
-<h3>ข้อมูลผู้บันทึก</h3>
-<label>ชื่อเจ้าของสัตว์เลี้ยง</label>
-<input type="text" id="recorderName">
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 5
+    <br>
+    <button type="button" onclick="openForm(5)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
+</div>
 
-<label>หมายเลขบัตรประชาชน เจ้าของสัตว์เลี้ยง (13 หลัก)</label>
-<input type="text" id="citizenId" maxlength="13" minlength="13" pattern="\d{13}" required>
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 6
+    <br>
+    <button type="button" onclick="openForm(6)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
+</div>
 
-<label>บ้านเลขที่ เจ้าของสัตว์เลี้ยง</label><input id="addrNo">
-<label>ถนน</label><input id="road">
-<label>ซอย</label><input id="soi">
-<label>ตำบล</label><input id="subdistrict">
-<label>อำเภอ</label><input id="district">
-<label>จังหวัด</label><input id="province">
+<div class="center-card">
+    ศูนย์บริการสาธารณสุขศูนย์ที่ 7
+    <br>
+    <button type="button" onclick="openForm(7)">
+        กดเริ่มสำรวจเพื่อกรอกข้อมูล
+    </button>
+</div>
 
-<label>เบอร์โทรศัพท์</label>
-<input type="text" id="phone">
-
-<button type="submit" style="margin-top:15px;padding:10px 20px;background:#2c3e90;color:#fff;border:none;border-radius:6px;">บันทึกข้อมูล</button>
-</form>
-<p id="status" style="margin-top:15px;"></p>
 </div>
 </main>
+</div>
 
-<footer>© เทศบาลนครอุบลราชธานี | กองสาธารณสุขและสิ่งแวดล้อม งานสัตวแพทย์ 045-246060 ต่อ 180 280</footer>
+<!-- =====================================================
+     หน้า 2 : แบบสำรวจ
+===================================================== -->
 
-<script>
-function openForm(center) {
-  const names = {
-    1:'ศูนย์บริการสาธารณสุขศูนย์ที่ 1',
-    2:'ศูนย์บริการสาธารณสุขศูนย์ที่ 2',
-    3:'ศูนย์บริการสาธารณสุขศูนย์ที่ 3',
-    4:'ศูนย์บริการสาธารณสุขศูนย์ที่ 4',
-    5:'ศูนย์บริการสาธารณสุขศูนย์ที่ 5',
-    6:'ศูนย์บริการสาธารณสุขศูนย์ที่ 6',
-    7:'ศูนย์บริการสาธารณสุขศูนย์ที่ 7'
-  };
+<div id="formPage">
 
-  document.getElementById('formSection').style.display = 'block';
+<main>
 
-  // เก็บเลขศูนย์
-  document.getElementById('centerId').value = center;
-    updateCommunityByCenter(center);
+<button
+    type="button"
+    class="page-button back-button"
+    onclick="backToCenter()">
+    ← กลับไปเลือกศูนย์
+</button>
 
-  // ⭐ เก็บชื่อศูนย์ตัวจริง (หัวใจของการแยก Sheet)
-  document.getElementById('centerName').value = names[center];
+<h2>แบบฟอร์มสำรวจสัตว์</h2>
 
-  // แสดงผลบนหน้าเว็บ
-  document.getElementById('centerLabel').innerText =
-    'ศูนย์ที่กำลังบันทึกข้อมูล: ' + names[center];
-}
+<p
+    id="centerLabel"
+    style="font-weight:bold;color:#2c3e90">
+</p>
 
-const petQtyInput = document.getElementById('petQty');
-const petList = document.getElementById('petList');
-petQtyInput.addEventListener('input', syncPetList);
+<form id="surveyForm">
 
-function syncPetList() {
+<input type="hidden" id="centerId">
+<input type="hidden" id="centerName">
 
-  const qty = parseInt(petQtyInput.value || 0);
-  const type = document.getElementById('animalType')?.value;
+<label>ปีงบประมาณ</label>
 
-  /* ===== บังคับกรอกชื่อผู้บันทึกเมื่อมีสัตว์ ===== */
-  const ownerInput = document.getElementById('recorderName');
-  if (qty > 0) {
-    ownerInput.required = true;
-    ownerInput.placeholder = 'กรุณากรอกชื่อผู้บันทึกข้อมูล';
-  } else {
-    ownerInput.required = false;
-    ownerInput.placeholder = '';
-  }
+<input
+    type="number"
+    id="year"
+    value="2569"
+    readonly
+    style="background:#eee"
+    required>
 
-  /* ===== สร้าง / ลบ pet-card ตามจำนวน ===== */
-  while (petList.children.length < qty) {
-    petList.appendChild(createPetCard(petList.children.length + 1));
-  }
-  while (petList.children.length > qty) {
-    petList.removeChild(petList.lastChild);
-  }
-}
+<label>ชุมชน</label>
 
-function toggleRabiesDate(selectEl){
-  const card = selectEl.closest('.pet-card');
-  const dateInput = card.querySelector('.rabiesDate');
-  if(selectEl.value === 'เคยฉีดวัคซีนพิษสุนัขบ้า'){
-    dateInput.style.display = 'block';
-    dateInput.required = true;
-  }else{
-    dateInput.style.display = 'none';
-    dateInput.required = false;
-    dateInput.value = '';
-  }
-}
+<select id="communitySelect" required>
+    <option value="">-- เลือกชุมชน --</option>
+</select>
 
-function toggleContraceptiveDate(sel){
-  const card = sel.closest('.pet-card');
-  const date = card.querySelector('.contraceptiveDate');
+<label>ประเภทสัตว์</label>
 
-  if(sel.value==='ฉีดยาคุม'){
-    date.style.display='block';
-    date.required=false;   // ⭐ ไม่บังคับกรอก
-  }else{
-    date.style.display='none';
-    date.required=false;
-    date.value='';
-  }
-}
+<select id="animalType" required>
 
-function createPetCard(no) {
-  const d=document.createElement('div');
-  d.className='pet-card';
-  d.innerHTML=`<strong>สัตว์ตัวที่ ${no}</strong>
-    <input class="petName" placeholder="ชื่อสัตว์">
-    <select class="gender"><option>ผู้</option><option>เมีย</option><option>ไม่ระบุ</option></select>
-    <input type="number" class="ageYear" placeholder="อายุ (ปี)" min="0">
-    <input type="number" class="ageMonth" placeholder="อายุ (เดือน)" min="0" max="11">
-    <input class="color" placeholder="สี / ตำหนิ">
-    <select class="sterilization" onchange="toggleContraceptiveDate(this)"><option>ยังไม่ทำหมัน</option><option>ทำหมันแล้ว</option><option>ฉีดยาคุม</option></select>
-    <input type="date" class="contraceptiveDate" style="display:none">
-    <select class="rabies" onchange="toggleRabiesDate(this)"><option>ไม่เคยฉีดวัคซีนพิษสุนัขบ้า</option><option>เคยฉีดวัคซีนพิษสุนัขบ้า</option></select>
-    <input type="date" class="rabiesDate" style="display:none" placeholder="วันที่ฉีดวัคซีนพิษสุนัขบ้าล่าสุด">
-    <select class="raising"><option>เลี้ยงในพื้นที่จำกัดตลอดเวลา</option><option>เลี้ยงในพื้นที่จำกัดบางเวลา</option><option>เลี้ยงแบบปล่อยตลอดเวลา</option></select>
-    <select class="location"><option>บ้านพักอาศัย</option><option>สถานที่ราชการ</option><option>วัด</option><option>ตลาด</option><option>บริเวณหมู่บ้าน</option><option>สถานที่เอกชน</option></select>`;
-  return d;
-}
-
- </script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  // หา input ผู้บันทึกข้อมูล (ใช้เป็นจุดอ้างอิงในการแทรก)
-  const recorderInput = document.getElementById('recorderName');
-  if (!recorderInput) return;
-
-  /* ===== label สัตวแพทย์ผู้ฉีด ===== */
-  const vetLabel = document.createElement('label');
-  vetLabel.textContent = 'สัตวแพทย์ผู้ฉีด';
-
-  /* ===== select สัตวแพทย์ผู้ฉีด ===== */
-  const vetSelect = document.createElement('select');
-  vetSelect.id = 'vetProvider';
-  vetSelect.required = true;
-  vetSelect.innerHTML = `
-    <option value="">-- เลือก --</option>
-    <option value="เทศบาลนครอุบลราชธานี/งานสัตวแพทย์">เทศบาลนครอุบลราชธานี / งานสัตวแพทย์</option>
-    <option value="คลินิก/โรงพยาบาลสัตว์">คลินิก / โรงพยาบาลสัตว์</option>
-    <option value="อาสาปศุสัตว์ที่ได้รับแต่งตั้ง">อาสาปศุสัตว์ที่ได้รับแต่งตั้ง</option>
-    <option value="คนรู้จัก">คนรู้จัก</option>
-    <option value="ฉีดเอง">ฉีดเอง</option>
-    <option value="อื่นๆ">อื่น ๆ</option>
-  `;
-
-  /* ===== ช่องกรอกชื่อเพิ่มเติม (ซ่อนเริ่มต้น) ===== */
-  const vetOtherInput = document.createElement('input');
-  vetOtherInput.type = 'text';
-  vetOtherInput.id = 'vetProviderOther';
-  vetOtherInput.placeholder = 'ระบุชื่อสัตวแพทย์ / ผู้ฉีด';
-  vetOtherInput.style.display = 'none';
-
-  /* ===== การแสดง/ซ่อนช่องกรอกชื่อ ===== */
-  vetSelect.addEventListener('change', function () {
-    if (this.value === 'อื่นๆ') {
-      vetOtherInput.style.display = 'block';
-      vetOtherInput.required = true;
-    } else {
-      vetOtherInput.style.display = 'none';
-      vetOtherInput.required = false;
-      vetOtherInput.value = '';
-    }
-  });
-
-  /* ===== แทรกลงในฟอร์ม ===== */
-  recorderInput.insertAdjacentElement('afterend', vetOtherInput);
-  recorderInput.insertAdjacentElement('afterend', vetSelect);
-  recorderInput.insertAdjacentElement('afterend', vetLabel);
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  /* 1) เปลี่ยนชื่อ label */
-  document.querySelectorAll('label').forEach(label => {
-    if (label.textContent.trim() === 'ชื่อเจ้าของสัตว์เลี้ยง') {
-      label.textContent = 'ผู้บันทึกข้อมูล / ผู้สำรวจข้อมูล';
-    }
-  });
-
-  /* 2) เพิ่มช่องตำแหน่ง */
-  const recorderInput = document.getElementById('recorderName');
-  const phoneInput = document.getElementById('phone');
-
-  if (recorderInput) {
-    const roleLabel = document.createElement('label');
-    roleLabel.textContent = 'ตำแหน่ง';
-
-    const roleSelect = document.createElement('select');
-    roleSelect.id = 'recorderRole';
-    roleSelect.required = true;
-    roleSelect.innerHTML = `
-      <option value="">-- เลือกตำแหน่ง --</option>
-      <option>เจ้าของสัตว์เลี้ยง</option>
-      <option>อสม.</option>
-    `;
-
-    recorderInput.insertAdjacentElement('afterend', roleSelect);
-    roleSelect.insertAdjacentElement('beforebegin', roleLabel);
-
-    /* 3) ถ้าเลือก อสม. ต้องกรอกเบอร์โทร */
-    roleSelect.addEventListener('change', function () {
-      if (!phoneInput) return;
-
-      if (this.value === 'อสม.') {
-        phoneInput.required = true;
-        phoneInput.placeholder = 'กรุณากรอกเบอร์โทรศัพท์ (อสม.)';
-      } else {
-        phoneInput.required = false;
-        phoneInput.placeholder = '';
-      }
-    });
-  }
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const citizenInput = document.getElementById('citizenId');
-  if (!citizenInput) return;
-
-  /* ไล่ย้อนขึ้นไปลบ label + select + input ที่เป็นช่องสัตวแพทย์ผู้ฉีด */
-  let el = citizenInput.previousElementSibling;
-
-  while (el) {
-    // 
-    if (el.tagName === 'LABEL' && el.textContent.includes('สัตวแพทย์ผู้ฉีด')) {
-      const select = el.nextElementSibling;
-      const otherInput = select && select.nextElementSibling;
-
-      if (select && select.tagName === 'SELECT') select.remove();
-      if (otherInput && otherInput.tagName === 'INPUT') otherInput.remove();
-
-      el.remove();
-      break;
-    }
-
-    el = el.previousElementSibling;
-  }
-
-});
-</script>
-<script>
-document.addEventListener('change', function (e) {
-
-  /* ---------- กรณี ฉีดยาคุม ---------- */
-  if (e.target.classList.contains('sterilization')) {
-    const card = e.target.closest('.pet-card');
-    let box = card.querySelector('.contraceptiveVetBox');
-
-    if (e.target.value === 'ฉีดยาคุม') {
-      if (!box) {
-        box = createVetBox('สัตวแพทย์ผู้ฉีดยาคุม');
-        box.classList.add('contraceptiveVetBox');
-        e.target.insertAdjacentElement('afterend', box);
-      }
-      box.style.display = 'block';
-    } else {
-      if (box) box.style.display = 'none';
-    }
-  }
-
-  /* ---------- กรณี วัคซีนพิษสุนัขบ้า ---------- */
-  if (e.target.classList.contains('rabies')) {
-    const card = e.target.closest('.pet-card');
-    let box = card.querySelector('.rabiesVetBox');
-
-    if (e.target.value === 'เคยฉีดวัคซีนพิษสุนัขบ้า') {
-      if (!box) {
-        box = createVetBox('สัตวแพทย์ผู้ฉีดวัคซีนพิษสุนัขบ้า');
-        box.classList.add('rabiesVetBox');
-        e.target.insertAdjacentElement('afterend', box);
-      }
-      box.style.display = 'block';
-    } else {
-      if (box) box.style.display = 'none';
-    }
-  }
-
-});
-
-/* ---------- ฟังก์ชันสร้างช่องสัตวแพทย์ผู้ฉีด ---------- */
-function createVetBox(labelText) {
-  const wrap = document.createElement('div');
-  wrap.style.marginTop = '6px';
-
-  wrap.innerHTML = `
-    <label>${labelText}</label>
-    <select class="vetSource">
-      <option value="">-- เลือก --</option>
-      <option>เทศบาลนครอุบลราชธานี / งานสัตวแพทย์</option>
-      <option>คลินิก / โรงพยาบาลสัตว์</option>
-      <option>อาสาปศุสัตว์ที่ได้รับแต่งตั้ง</option>
-      <option>คนรู้จัก</option>
-      <option>ฉีดเอง</option>
-      <option>อื่นๆ</option>
-    </select>
-    <input type="text" class="vetName" placeholder="กรอกชื่อสัตวแพทย์ / ผู้ฉีด" style="display:none">
-  `;
-
-  const select = wrap.querySelector('.vetSource');
-  const input = wrap.querySelector('.vetName');
-
-  select.addEventListener('change', function () {
-    if (this.value === 'อื่นๆ') {
-      input.style.display = 'block';
-      input.required = true;
-    } else {
-      input.style.display = 'none';
-      input.required = false;
-      input.value = '';
-    }
-  });
-
-  return wrap;
-}
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const roleSelect = document.getElementById('recorderRole');
-  const phoneInput = document.getElementById('phone');
-  const centerIdInput = document.getElementById('centerId');
-
-  if (!roleSelect) return;
-
-  /* ล้าง option เดิม แล้วสร้างใหม่ */
-  roleSelect.innerHTML = `
-    <option value="">-- เลือกตำแหน่ง --</option>
-    <option>เจ้าของสัตว์เลี้ยง</option>
-  `;
-
-  /* เพิ่ม อสม. ตามศูนย์ 1 - 7 */
-  for (let i = 1; i <= 7; i++) {
-    const opt = document.createElement('option');
-    opt.value = `อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ ${i}`;
-    opt.textContent = `อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ ${i}`;
-    roleSelect.appendChild(opt);
-  }
-
-  /* เงื่อนไข: ถ้าเลือก อสม. ต้องกรอกเบอร์โทร */
-  roleSelect.addEventListener('change', function () {
-    if (!phoneInput) return;
-
-    if (this.value.startsWith('อสม.ศูนย์บริการสาธารณสุข')) {
-      phoneInput.required = true;
-      phoneInput.placeholder = 'กรุณากรอกเบอร์โทรศัพท์ (อสม.)';
-    } else {
-      phoneInput.required = false;
-      phoneInput.placeholder = '';
-    }
-  });
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const phoneInput = document.getElementById('phone');
-  if (!phoneInput) return;
-
-  /* ===== label ===== */
-  const label = document.createElement('label');
-  label.innerHTML = 'สถานที่เลี้ยง <span style="color:red">*</span>';
-
-  /* ===== select ===== */
-  const select = document.createElement('select');
-  select.id = 'raisingPlace';
-  select.required = true;
-  select.style.display = 'block';
-  select.style.marginTop = '6px';
-
-  select.innerHTML = `
-    <option value="">-- กรุณาเลือกสถานที่เลี้ยง --</option>
-    <option value="ไม่ใช่สถานที่เดียวกับเจ้าของสัตว์">
-      ไม่ใช่สถานที่เดียวกับเจ้าของสัตว์
-    </option>
-    <option value="สถานที่เดียวกับเจ้าของสัตว์">
-      สถานที่เดียวกับเจ้าของสัตว์
-    </option>
-    <option value="ไม่มี">
-      ไม่มี
-    </option>
-  `;
-
-  phoneInput.insertAdjacentElement('afterend', select);
-  select.insertAdjacentElement('beforebegin', label);
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const citizenInput = document.getElementById('citizenId');
-  if (!citizenInput) return;
-
-  /* ป้องกันการสร้างซ้ำ */
-  if (document.getElementById('ownerInfoTitle')) return;
-
-  const ownerTitle = document.createElement('h3');
-  ownerTitle.id = 'ownerInfoTitle';
-  ownerTitle.textContent = 'ข้อมูลเจ้าของสัตว์';
-
-  /* ตั้งค่าสีเป็นสีดำ */
-  ownerTitle.style.marginTop = '20px';
-  ownerTitle.style.color = '#000';
-
-  const citizenLabel = citizenInput.previousElementSibling;
-  if (citizenLabel && citizenLabel.tagName === 'LABEL') {
-    citizenLabel.insertAdjacentElement('beforebegin', ownerTitle);
-  }
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const header = document.querySelector('header');
-  if (!header) return;
-
-  /* เพิ่ม style responsive */
-  const style = document.createElement('style');
-  style.textContent = `
-    @media (max-width: 600px) {
-
-      header {
-        padding: 15px 10px;
-      }
-
-      header h1 {
-        font-size: 20px !important;
-      }
-
-      header h2 {
-        font-size: 16px !important;
-      }
-
-      header h3 {
-        font-size: 16px !important;
-      }
-
-      header p {
-        font-size: 14px !important;
-      }
-
-    }
-  `;
-  document.head.appendChild(style);
-
-});
-</script>
-<script>
-(function () {
-
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxxbwaoWlvcC9OmZtL3AZI7teRO_ljfjaQER35UcfERohfyOFdnIdAu-7BGxuQQzvdZ/exec";
-
-  const form = document.getElementById('surveyForm');
-  if (!form) return;
-
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    /* ---------- สัตว์ ---------- */
-    let pets = [];
-    if (document.getElementById('animalType').value !== 'ไม่มี') {
-      pets = [...document.querySelectorAll('.pet-card')].map((card, i) => {
-
-        const getVet = (box) => {
-          if (!box) return '';
-          const src = box.querySelector('.vetSource')?.value || '';
-          const name = box.querySelector('.vetName')?.value || '';
-          return src === 'อื่นๆ' ? name : src;
-        };
-
-        return {
-          no: i + 1,
-          name: card.querySelector('.petName')?.value || '',
-          gender: card.querySelector('.gender')?.value || '',
-          ageYear: card.querySelector('.ageYear')?.value || '',
-          ageMonth: card.querySelector('.ageMonth')?.value || '',
-          color: card.querySelector('.color')?.value || '',
-          sterilization: card.querySelector('.sterilization')?.value || '',
-          contraceptiveDate: card.querySelector('.contraceptiveDate')?.value || '',
-          contraceptiveVet: getVet(card.querySelector('.contraceptiveVetBox')),
-          rabies: card.querySelector('.rabies')?.value || '',
-          rabiesDate: card.querySelector('.rabiesDate')?.value || '',
-          rabiesVet: getVet(card.querySelector('.rabiesVetBox')),
-          raisingStyle: card.querySelector('.raising')?.value || '',
-                    raisingLocation: card.querySelector('.location')?.value || ''
-
-        };
-      });
-    }
-
-    /* ---------- payload ---------- */
-    const payload = {
-  timestamp: new Date().toISOString(),
-  centerId: document.getElementById('centerId')?.value || '',
-  centerName: document.getElementById('centerName')?.value || '',
-  year: document.getElementById('year')?.value || '',
-  community: document.getElementById('community')?.value || '',
-  animalType: document.getElementById('animalType')?.value || '',
-
-  otherAnimalType: document.getElementById('otherAnimalType')?.value || '',
-  otherAnimalQty: document.getElementById('otherAnimalQty')?.value || '',
-
-  ownerName: document.getElementById('recorderName')?.value || '',
-  recorderName: document.getElementById('recorderName')?.value || '',
-  recorderRole: document.getElementById('recorderRole')?.value || '',
-
-  citizenId: document.getElementById('citizenId')?.value || '',
-  phone: document.getElementById('phone')?.value || '',
-  homePhone: document.getElementById('homePhone')?.value || '',
-
-  /* 🔥 แก้ตรงนี้ */
-  raisingArea: document.getElementById('raisingPlace')?.value || '',
-
-  address: {
-    addrNo: document.getElementById('addrNo')?.value || '',
-    road: document.getElementById('road')?.value || '',
-    soi: document.getElementById('soi')?.value || '',
-    subdistrict: document.getElementById('subdistrict')?.value || '',
-    district: document.getElementById('district')?.value || '',
-    province: document.getElementById('province')?.value || ''
-  },
-
-  pets: pets
-};
-
-    document.getElementById('status').innerText = '⏳ กำลังบันทึกข้อมูล...';
-
-    try {
-      const res = await fetch(GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload) // ⭐ ห้ามใส่ headers
-      });
-
-      const result = JSON.parse(await res.text());
-
-      if (result.status === 'success') {
-        document.getElementById('status').innerText =
-          '✅ บันทึกข้อมูลลง Google Sheet เรียบร้อย';
-
-        form.reset();
-        document.getElementById('petList').innerHTML = '';
-        document.getElementById('petQty').value = 0;
-
-      } else {
-        document.getElementById('status').innerText =
-          '❌ บันทึกไม่สำเร็จ: ' + (result.message || 'ไม่ทราบสาเหตุ');
-        console.error(result);
-      }
-
-    } catch (err) {
-      console.error(err);
-      document.getElementById('status').innerText =
-        '❌ ไม่สามารถเชื่อมต่อ Google Script';
-    }
-
-  });
-
-})();
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const phoneInput = document.getElementById('phone');
-  if (!phoneInput) return;
-
-  /* ===== label เบอร์โทรศัพท์บ้าน ===== */
-  const homePhoneLabel = document.createElement('label');
-  homePhoneLabel.textContent = 'เบอร์โทรศัพท์บ้าน';
-
-  /* ===== input เบอร์โทรศัพท์บ้าน ===== */
-  const homePhoneInput = document.createElement('input');
-  homePhoneInput.type = 'text';
-  homePhoneInput.id = 'homePhone';
-  homePhoneInput.placeholder = 'เช่น 045-123456';
-  homePhoneInput.pattern = '[0-9\\-]+';
-
-  /* ===== แทรกใต้เบอร์มือถือ ===== */
-  phoneInput.insertAdjacentElement('afterend', homePhoneInput);
-  homePhoneInput.insertAdjacentElement('beforebegin', homePhoneLabel);
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const communityInput = document.getElementById('community');
-  if (!communityInput) return;
-
-  /* ===== สร้าง select ===== */
-  const communitySelect = document.createElement('select');
-  communitySelect.id = 'communitySelect';
-  communitySelect.style.display = 'none';
-  communitySelect.required = true;
-
-  /* ===== รายชื่อชุมชนแยกตามศูนย์ ===== */
-  const communitiesByCenter = {
-
-    1: [
-      'ชุมชนวัดไชยมงคล',
-      'ชุมชนวัดสุปัฏน์',
-      'ชุมชนวัดศรีอุบลรัตนาราม',
-      'ชุมชนศาลาประชาคม',
-      'ชุมชนโรงเรียนอนุบาลอุบล',
-      'ชุมชนวัดทุ่งศรีเมือง 1',
-      'ชุมชนวัดทุ่งศรีเมือง 2',
-      'ชุมชนวัดหลวง 1',
-      'ชุมชนวัดหลวง 2',
-      'ชุมชนวัดกลาง',
-      'ชุมชนวัดเลียบ 1',
-      'ชุมชนวัดเลียบ 2',
-      'ชุมชนโรงเรียนเทศบาลบูรพา 1',
-      'ชุมชนโรงเรียนเทศบาลบูรพา 2'
-    ],
-
-    2: [
-      'โรงเรียนบ้านก้านเหลือง 1',
-      'โรงเรียนบ้านก้านเหลือง 2',
-      'โรงเรียนบ้านก้านเหลือง 3',
-      'วัดพระธาตุหนองบัว 1',
-            'วัดพระธาตุหนองบัว 2',
-      'โรงเรียนเทศบาล 2 หนองบัว',
-      'โรงเรียนโปลีเทคนิค 1',
-      'โรงเรียนโปลีเทคนิค 2',
-      'ศาลาหนองนาควาย 1',
-      'ศาลาหนองนาควาย 2',
-      'วัดบ้านนาควาย 1',
-      'วัดบ้านนาควาย 2',
-      'โรงเรียนเมืองอุบล 1',
-      'โรงเรียนเมืองอุบล 2'
-    ],
-
-    3: [
-      'ถนนพนม 1',
-      'ถนนพนม 2',
-      'โรงเรียนเบ็ญจะมะ 3',
-      'โรงเรียนเบ็ญจะมะ 4',
-      'วัดท่าวังหิน',
-      'หลังโรงเรียนเยาวเรศ 1',
-      'หลังโรงเรียนเยาวเรศ 2',
-      'หลังโรงเรียนเยาวเรศ 3',
-      'หลังโรงเรียนเยาวเรศ 4',
-      'ชุมชนสำนักงานที่ดินจังหวัดฯ',
-      'วัดโรมันคาทอลิค',
-      'โรงเรียนสามัคคี 3',
-      'วัดกุดคูณ',
-      'วิทยาลัยสารพัดช่าง'
-    ],
-
-    4: [
-      'วัดพลแพน',
-      'ตลาดสดเทศบาล 5',
-      'ศาลากลางบ้านดู่ 1',
-      'ศาลากลางบ้านดู่ 2',
-      'ศาลากลางบ้านดู่ 3',
-      'ศาลากลางบ้านดู่ 4',
-      'วัดศรีประดู่ 1',
-      'วัดศรีประดู่ 2',
-      'วัดบูรพา 1',
-      'วัดบูรพา 2',
-      'วัดบูรพา 3',
-      'วัดเลียบ 3'
-    ],
-
-    5: [
-      'วังทอง',
-      'วัดศรีแสงทอง',
-      'สหกรณ์การเกษตร 1',
-      'สหกรณ์การเกษตร 2',
-      'สหกรณ์การเกษตร 3',
-      'ดอนเจ้าปู่ทองแดง 1',
-      'ดอนเจ้าปู่ทองแดง 2',
-      'โรงเรียนปทุมวิทยากร 1',
-      'โรงเรียนปทุมวิทยากร 2',
-      'สำนักงานขนส่งจังหวัด',
-      'อุปลีสาน 6',
-      'วัดสารพัฒนึก 1',
-      'วัดสารพัฒนึก 2',
-      'วิทยาลัยพยาบาล',
-      'ทางเข้าคริสตจักร'
-    ],
-
-    6: [
-      'เฉลิมพระเกียรติ 1',
-      'เฉลิมพระเกียรติ 2',
-      'วัดป่าแสนอุดม 1',
-      'วัดป่าแสนอุดม 2',
-      'วัดป่าแสนอุดม 3',
-      'ต้นซอยสุขาอุปถัมภ์ 11',
-      'ท้ายซอยสุขาอุปถัมภ์ 11',
-      'พระศรีมหาโพธิ์ 1',
-      'พระศรีมหาโพธิ์ 2'
-    ],
-
-    7: [
-      'สนามกีฬากลาง 1',
-      'สนามกีฬากลาง 2',
-      'สนามกีฬากลาง 3',
-      'ชยางกูร 2.1 (1)',
-      'ชยางกูร 2.1 (2)',
-      'โรงเรียนนารีนุกูล',
-      'อยู่วงศ์ธรรม',
-      'โรงเรียนอัสสัมชัญ 1',
-      'โรงเรียนอัสสัมชัญ 2',
-      'วัดทองนพคุณ',
-      'วัดปทุมมาลัย 1',
-      'วัดปทุมมาลัย 2',
-      'วัดแจ้ง 1',
-      'วัดแจ้ง 2',
-      'โรงเรียนอุบลวิทยาคม 1',
-      'โรงเรียนอุบลวิทยาคม 2',
-      'วัดมหาวนาราม 1',
-      'วัดมหาวนาราม 2',
-      'วัดมณีวนาราม',
-      'ศาลเยาวชนและครอบครัว',
-      'วัดสว่างอารมณ์ 1',
-      'วัดสว่างอารมณ์ 2',
-      'โรงเรียนสามัคคี 1',
-      'โรงเรียนสามัคคี 2',
-      'วิทยาลัยเทคนิค 1',
-      'วิทยาลัยเทคนิค 2',
-      'โรงเรียนเบ็ญจะมะ 1',
-      'โรงเรียนเบ็ญจะมะ 2'
-    ]
-
-  };
-
-  /* แทรก select หลัง input */
-  communityInput.insertAdjacentElement('afterend', communitySelect);
-
-  /* ===== ฟังก์ชันเปลี่ยนชุมชนตามศูนย์ ===== */
-  window.updateCommunityByCenter = function (centerId) {
-
-    const list = communitiesByCenter[centerId];
-
-    if (list) {
-      communityInput.style.display = 'none';
-      communityInput.required = false;
-      communityInput.value = '';
-
-      communitySelect.style.display = 'block';
-      communitySelect.innerHTML =
-        '<option value="">-- เลือกชุมชน --</option>' +
-        list.map(c => `<option value="${c}">${c}</option>`).join('');
-    } else {
-      communitySelect.style.display = 'none';
-      communitySelect.value = '';
-
-      communityInput.style.display = 'block';
-      communityInput.required = true;
-    }
-  };
-
-  /* ===== ตอน submit โอนค่ากลับไป input ===== */
-  const form = document.getElementById('surveyForm');
-  form.addEventListener('submit', function () {
-    if (communitySelect.style.display !== 'none') {
-      communityInput.value = communitySelect.value;
-    }
-  });
-
-});
-</script>
-<script>
-/* ==================================================
-   FIX ชุมชนไม่ขึ้น โดยไม่แก้ไฟล์เดิม
-   ใช้ submit capture (ทำงานก่อนทุก submit เดิม)
-================================================== */
-document.addEventListener('submit', function (e) {
-
-  const form = e.target;
-  if (!form || form.id !== 'surveyForm') return;
-
-  const communityInput = document.getElementById('community');
-  const communitySelect = document.getElementById('communitySelect');
-
-  if (communityInput && communitySelect &&
-      communitySelect.style.display !== 'none') {
-
-    communityInput.value = communitySelect.value || '';
-  }
-
-}, true); // ⭐ true = capture phase
-</script>
-<script>
-/* ==================================================
-   HARD VALIDATION LOCK
-   ถ้าไม่ผ่าน = ห้ามส่งเด็ดขาด (ทุก submit)
-================================================== */
-document.addEventListener('submit', function (e) {
-
-  const form = e.target;
-  if (!form || form.id !== 'surveyForm') return;
-
-  const recorder = document.getElementById('recorderName');
-  const phone = document.getElementById('phone');
-  const animalType = document.getElementById('animalType');
-
-  /* -------- ผู้บันทึก -------- */
-  if (!recorder || !recorder.value.trim()) {
-    alert('กรุณากรอก ผู้บันทึกข้อมูล / ผู้สำรวจข้อมูล (ชื่อ-นามสกุล)');
-    recorder?.focus();
-    e.preventDefault();
-    e.stopImmediatePropagation(); // ⭐ ตัวนี้คือหัวใจ
-    return;
-  }
-
-  /* -------- เบอร์โทร 10 หลัก -------- */
-  if (!phone || !/^\d{10}$/.test(phone.value)) {
-    alert('กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก');
-    phone?.focus();
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return;
-  }
-
-  /* -------- สุนัข / แมว -------- */
-  if (animalType.value === 'สุนัข' || animalType.value === 'แมว') {
-
-    const pets = document.querySelectorAll('.pet-card');
-    if (pets.length === 0) {
-      alert('กรุณาระบุข้อมูลสัตว์เลี้ยง');
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      return;
-    }
-
-    for (let i = 0; i < pets.length; i++) {
-      const card = pets[i];
-      const no = i + 1;
-
-      const v = cls => card.querySelector(cls)?.value?.trim();
-
-      const base = [
-        ['ชื่อสัตว์', '.petName'],
-        ['เพศ', '.gender'],
-        ['สี / ตำหนิ', '.color'],
-        ['การทำหมัน', '.sterilization'],
-        ['วัคซีนพิษสุนัขบ้า', '.rabies'],
-        ['วิธีการเลี้ยง', '.raising'],
-        ['สถานที่เลี้ยง', '.location']
-      ];
-
-      for (const [label, cls] of base) {
-        if (!v(cls)) {
-          alert(`สัตว์ตัวที่ ${no} : กรุณากรอก ${label}`);
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          return;
-        }
-      }
-
-      if (!v('.ageYear') && !v('.ageMonth')) {
-        alert(`สัตว์ตัวที่ ${no} : กรุณากรอกอายุ`);
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return;
-      }
-
-      if (v('.rabies') === 'เคยฉีดวัคซีนพิษสุนัขบ้า') {
-        if (!v('.rabiesDate') ||
-            !card.querySelector('.rabiesVetBox .vetSource')?.value) {
-          alert(`สัตว์ตัวที่ ${no} : กรุณากรอกข้อมูลวัคซีนพิษสุนัขบ้าให้ครบ`);
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          return;
-        }
-      }
-
-     if (v('.sterilization') === 'ฉีดยาคุม') {
-  if (!card.querySelector('.contraceptiveVetBox .vetSource')?.value) {
-    alert(`สัตว์ตัวที่ ${no} : กรุณาเลือกผู้ฉีดยาคุม`);
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return;
-  }
-}
-    }
-  }
-
-}, true); // ⭐ capture phase
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  // เปลี่ยนข้อความ label
-  document.querySelectorAll('label').forEach(label => {
-    if (label.textContent.replace(/\s+/g, '').includes('ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล')) {
-      label.textContent = 'ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล(ชื่อ-นามสกุล)';
-    }
-  });
-
-  // กรณีบางธีมใช้ placeholder แทน label
-  const recorder = document.getElementById('recorderName');
-  if (recorder && recorder.placeholder) {
-    recorder.placeholder = 'ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล(ชื่อ-นามสกุล)';
-  }
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const citizenInput = document.getElementById('citizenId');
-  if (!citizenInput) return;
-
-  /* ===== กล่องรูปโปรไฟล์ ===== */
-  const wrap = document.createElement('div');
-  wrap.style.margin = '15px 0';
-  wrap.style.textAlign = 'center';
-
-  wrap.innerHTML = `
-    <label style="display:block;margin-bottom:8px;">
-      รูปโปรไฟล์เจ้าของสัตว์เลี้ยง
-    </label>
-    <img id="ownerPhotoPreview"
-         src=""
-         alt="preview"
-         style="
-           width:120px;
-           height:120px;
-           object-fit:cover;
-           border-radius:50%;
-           border:2px solid #2c3e90;
-           display:none;
-           margin-bottom:10px;
-         ">
-    <input type="file"
-           id="ownerPhoto"
-           accept="image/*"
-           capture="environment">
-  `;
-
-  /* ===== แทรกก่อนหัวข้อข้อมูลเจ้าของสัตว์ ===== */
-  const ownerTitle = document.getElementById('ownerInfoTitle');
-  if (ownerTitle) {
-    ownerTitle.insertAdjacentElement('beforebegin', wrap);
-  } else {
-    citizenInput.insertAdjacentElement('beforebegin', wrap);
-  }
-
-  /* ===== preview รูป ===== */
-  const fileInput = wrap.querySelector('#ownerPhoto');
-  const preview = wrap.querySelector('#ownerPhotoPreview');
-
-  fileInput.addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-      this.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  });
-});
-</script>
-<script>
-(function () {
-
-  const originalFetch = window.fetch;
-
-  window.fetch = async function (url, options) {
-
-    if (!options || typeof options.body !== 'string') {
-      return originalFetch.call(this, url, options);
-    }
-
-    try {
-
-      const data = JSON.parse(options.body);
-
-      /* =========================
-         แนบเบอร์บ้าน
-      ==========================*/
-      const homePhoneInput = document.getElementById('homePhone');
-      if (homePhoneInput) {
-        data.homePhone = homePhoneInput.value || '';
-      }
-
-      /* =========================
-         แนบรูปโปรไฟล์เจ้าของ
-      ==========================*/
-      const ownerFile = document.getElementById('ownerPhoto');
-      if (ownerFile && ownerFile.files && ownerFile.files[0]) {
-        const ownerBase64 = await readFile(ownerFile.files[0]);
-        data.ownerPhotoBase64 = ownerBase64;
-      }
-
-      /* =========================
-         ⭐ แนบรูปสัตว์ทุกตัว ⭐
-      ==========================*/
-      if (data.pets && data.pets.length) {
-
-        const cards = document.querySelectorAll('.pet-card');
-
-        for (let i = 0; i < cards.length; i++) {
-
-          const fileInput = cards[i].querySelector('.petPhoto');
-
-          if (fileInput && fileInput.files && fileInput.files[0]) {
-            data.pets[i].petPhotoBase64 =
-              await compressImage(fileInput.files[0]);
-          } else {
-            data.pets[i].petPhotoBase64 = '';
-          }
-
-        }
-      }
-
-      options.body = JSON.stringify(data);
-
-      return originalFetch.call(this, url, options);
-
-    } catch (err) {
-      return originalFetch.call(this, url, options);
-    }
-  };
-
-  /* ---------- helper ---------- */
-
-  function readFile(file) {
-    return new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = e => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function compressImage(file, maxWidth = 800, quality = 0.7) {
-    return new Promise(resolve => {
-      const img = new Image();
-      const reader = new FileReader();
-
-      reader.onload = e => img.src = e.target.result;
-
-      img.onload = function () {
-        const canvas = document.createElement('canvas');
-        const scale = Math.min(maxWidth / img.width, 1);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-
-      reader.readAsDataURL(file);
-    });
-  }
-
-})();
-</script>
-<script>
-/* ==================================================
-   HARD LOCK : ต้องอัปโหลดรูปโปรไฟล์
-================================================== */
-document.addEventListener('submit', function (e) {
-
-  const form = e.target;
-  if (!form || form.id !== 'surveyForm') return;
-
-  const photoInput = document.getElementById('ownerPhoto');
-
-  if (!photoInput || !photoInput.files || photoInput.files.length === 0) {
-    alert('กรุณาอัปโหลดรูปโปรไฟล์เจ้าของสัตว์เลี้ยง');
-    photoInput?.focus();
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return;
-  }
-
-}, true); // ⭐ capture phase
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const yearInput = document.getElementById('year');
-  if (!yearInput) return;
-
-  yearInput.value = '2569';
-  yearInput.readOnly = true;
-  yearInput.style.background = '#f0f0f0';
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  ['addrNo','road','subdistrict','district','province'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.required = true;
-  });
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const animalType = document.getElementById('animalType');
-  const otherBox = document.getElementById('otherAnimalBox');
-  const otherType = document.getElementById('otherAnimalType');
-  const otherQty = document.getElementById('otherAnimalQty');
-
-  const petQtyInput = document.getElementById('petQty');
-  const petList = document.getElementById('petList');
-
-  animalType.addEventListener('change', function () {
-
-    if (this.value === 'อื่นๆโปรดระบุ') {
-
-      /* แสดงช่องอื่นๆ */
-      otherBox.style.display = 'block';
-      otherType.required = true;
-      otherQty.required = true;
-
-      /* ซ่อนระบบสัตว์ตัวที่ 1 2 3 */
-      petQtyInput.value = 0;
-      petList.innerHTML = '';
-      petQtyInput.disabled = true;
-      petList.style.display = 'none';
-
-    } else {
-
-      /* กลับสู่โหมดปกติ */
-      otherBox.style.display = 'none';
-      otherType.required = false;
-      otherQty.required = false;
-      otherType.value = '';
-      otherQty.value = '';
-
-      petQtyInput.disabled = false;
-      petList.style.display = 'block';
-    }
-
-  });
-
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const animalType = document.getElementById('animalType');
-  const otherBox = document.getElementById('otherAnimalBox');
-  const otherType = document.getElementById('otherAnimalType');
-  const otherQty = document.getElementById('otherAnimalQty');
-
-  const petQtyBox = document.getElementById('petQtyBox');
-  const petQtyInput = document.getElementById('petQty');
-  const petList = document.getElementById('petList');
-
-  animalType.addEventListener('change', function () {
-
-    if (this.value === 'อื่นๆโปรดระบุ') {
-
-      /* ===== โหมดอื่น ๆ ===== */
-      otherBox.style.display = 'block';
-      otherType.required = true;
-      otherQty.required = true;
-
-      /* ❌ ซ่อน จำนวนสัตว์เลี้ยง + pet-card */
-      petQtyBox.style.display = 'none';
-      petQtyInput.value = 0;
-      petQtyInput.disabled = true;
-      petList.innerHTML = '';
-      petList.style.display = 'none';
-
-    } else {
-
-      /* ===== โหมดปกติ ===== */
-      otherBox.style.display = 'none';
-      otherType.required = false;
-      otherQty.required = false;
-      otherType.value = '';
-      otherQty.value = '';
-
-      petQtyBox.style.display = 'block';
-      petQtyInput.disabled = false;
-      petList.style.display = 'block';
-    }
-
-  });
-
-});
-</script>
-<script>
-/* ==================================================
-   เพิ่มรูปสัตว์เลี้ยง (เฉพาะสุนัข/แมว)
-   + บีบอัดรูป
-   + บังคับอัปโหลด
-   + แนบเข้า payload อัตโนมัติ
-   โดยไม่แก้ไฟล์เดิม
-================================================== */
-
-(function(){
-
-  /* ===== 1. แสดงช่องรูปเมื่อเป็น สุนัข/แมว ===== */
-  document.addEventListener('change', function(e){
-
-    if(e.target.id === 'animalType'){
-      togglePetPhotoBox();
-    }
-
-    if(e.target.classList.contains('petPhoto')){
-      previewPetPhoto(e.target);
-    }
-
-  });
-
-  function togglePetPhotoBox(){
-    const type = document.getElementById('animalType')?.value;
-    const show = (type === 'สุนัข' || type === 'แมว');
-
-    document.querySelectorAll('.pet-card').forEach(card=>{
-      let box = card.querySelector('.petPhotoBox');
-
-      if(!box){
-        box = createPhotoBox();
-        card.appendChild(box);
-      }
-
-      box.style.display = show ? 'block' : 'none';
-    });
-  }
-
-  function createPhotoBox(){
-    const div = document.createElement('div');
-    div.className = 'petPhotoBox';
-    div.style.marginTop = '10px';
-    div.style.display = 'none';
-
-    div.innerHTML = `
-      <label>รูปภาพสัตว์เลี้ยง</label>
-      <img class="petPhotoPreview"
-           style="width:120px;height:120px;object-fit:cover;border-radius:8px;display:none;margin-bottom:6px;">
-      <input type="file"
-             class="petPhoto"
-             accept="image/*"
-             capture="environment">
-    `;
-    return div;
-  }
-
-  function previewPetPhoto(input){
-    const file = input.files[0];
-    if(!file || !file.type.startsWith('image/')) return;
-
-    const reader = new FileReader();
-    const preview = input.closest('.petPhotoBox')
-                         .querySelector('.petPhotoPreview');
-
-    reader.onload = e=>{
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  /* ===== 2. บีบอัดรูป ===== */
-  function compressImage(file, maxWidth = 800, quality = 0.7){
-    return new Promise(resolve=>{
-      const img = new Image();
-      const reader = new FileReader();
-
-      reader.onload = e => img.src = e.target.result;
-
-      img.onload = function(){
-        const canvas = document.createElement('canvas');
-        const scale = Math.min(maxWidth / img.width, 1);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-
-      reader.readAsDataURL(file);
-    });
-  }
-
-  /* ===== 3. ดัก fetch เดิม เพื่อแนบรูปเข้า payload ===== */
-  const originalFetch = window.fetch;
-
-  window.fetch = async function(url, options){
-
-    if(!options || typeof options.body !== 'string'){
-      return originalFetch.call(this, url, options);
-    }
-
-    try{
-      const data = JSON.parse(options.body);
-
-      if(data.pets && data.pets.length){
-
-        const cards = document.querySelectorAll('.pet-card');
-
-        for(let i=0;i<cards.length;i++){
-          const fileInput = cards[i].querySelector('.petPhoto');
-
-          if(fileInput && fileInput.files[0]){
-            data.pets[i].petPhotoBase64 =
-              await compressImage(fileInput.files[0]);
-          }else{
-            data.pets[i].petPhotoBase64 = '';
-          }
-        }
-      }
-
-      options.body = JSON.stringify(data);
-
-      return originalFetch.call(this, url, options);
-
-    }catch(err){
-      return originalFetch.call(this, url, options);
-    }
-  };
-
-  /* ===== 4. HARD LOCK บังคับต้องมีรูป (เฉพาะสุนัข/แมว) ===== */
-  document.addEventListener('submit', function(e){
-
-    const form = e.target;
-    if(!form || form.id !== 'surveyForm') return;
-
-    const type = document.getElementById('animalType')?.value;
-    if(type !== 'สุนัข' && type !== 'แมว') return;
-
-    const cards = document.querySelectorAll('.pet-card');
-
-    for(let i=0;i<cards.length;i++){
-      const fileInput = cards[i].querySelector('.petPhoto');
-      if(!fileInput || !fileInput.files.length){
-        alert(`สัตว์ตัวที่ ${i+1} : กรุณาอัปโหลดรูปภาพ`);
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return;
-      }
-    }
-
-  }, true);
-
-})();
-</script>
- <script>
-/* ==================================================
-   FIX: รูปสัตว์ไม่ขึ้น เพราะ pet-card ถูกสร้างทีหลัง
-   แก้โดย Hook หลัง syncPetList()
-================================================== */
-
-(function(){
-
-  function ensurePhotoBox(){
-    const type = document.getElementById('animalType')?.value;
-    if(type !== 'สุนัข' && type !== 'แมว') return;
-
-    document.querySelectorAll('.pet-card').forEach(card=>{
-      if(!card.querySelector('.petPhotoBox')){
-        const div = document.createElement('div');
-        div.className = 'petPhotoBox';
-        div.style.marginTop = '10px';
-
-        div.innerHTML = `
-          <label>รูปภาพสัตว์เลี้ยง</label>
-          <img class="petPhotoPreview"
-               style="width:120px;height:120px;object-fit:cover;border-radius:8px;display:none;margin-bottom:6px;">
-          <input type="file"
-                 class="petPhoto"
-                 accept="image/*"
-                 capture="environment">
-        `;
-
-        card.appendChild(div);
-      }
-    });
-  }
-
-  /* 🔥 Hook เข้า syncPetList */
-  const oldSync = window.syncPetList;
-  window.syncPetList = function(){
-    if(oldSync) oldSync();
-    setTimeout(ensurePhotoBox, 50);
-  };
-
-})();
-</script>
-<script>
-/* =====================================================
-   UNIVERSAL PET PHOTO SYSTEM
-   รองรับทุกประเภทสัตว์
-   บังคับรูปเฉพาะ สุนัข/แมว
-   ไม่ต้องแก้ไฟล์เดิม
-===================================================== */
-(function(){
-
-  /* ---------------------------
-     สร้างช่องรูปใน pet-card
-  ----------------------------*/
-  function addPhotoBoxToCard(card){
-    if(card.querySelector('.petPhotoBox')) return;
-
-    const div = document.createElement('div');
-    div.className = 'petPhotoBox';
-    div.style.marginTop = '10px';
-
-    div.innerHTML = `
-      <label>รูปภาพสัตว์เลี้ยง</label>
-      <img class="petPhotoPreview"
-           style="width:120px;height:120px;object-fit:cover;border-radius:8px;display:none;margin-bottom:6px;">
-      <input type="file"
-             class="petPhoto"
-             accept="image/*"
-             capture="environment">
-    `;
-
-    card.appendChild(div);
-  }
-
-  /* ---------------------------
-     preview รูป
-  ----------------------------*/
-  document.addEventListener('change', function(e){
-    if(e.target.classList.contains('petPhoto')){
-      const file = e.target.files[0];
-      if(!file || !file.type.startsWith('image/')) return;
-
-      const reader = new FileReader();
-      const preview = e.target.closest('.petPhotoBox')
-                               .querySelector('.petPhotoPreview');
-
-      reader.onload = function(ev){
-        preview.src = ev.target.result;
-        preview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  /* ---------------------------
-     รองรับ สุนัข แมว โค ฯลฯ
-  ----------------------------*/
-  function syncNormalPetPhotos(){
-    document.querySelectorAll('.pet-card').forEach(addPhotoBoxToCard);
-  }
-
-  const observer = new MutationObserver(syncNormalPetPhotos);
-  observer.observe(document.body, {childList:true, subtree:true});
-
-  document.addEventListener('change', function(e){
-    if(e.target.id === 'animalType'){
-      setTimeout(syncNormalPetPhotos,100);
-    }
-  });
-
-  /* ---------------------------
-     รองรับ "อื่นๆโปรดระบุ"
-  ----------------------------*/
-  const otherQty = document.getElementById('otherAnimalQty');
-  const otherBox = document.getElementById('otherAnimalBox');
-
-  if(otherQty){
-    otherQty.addEventListener('input', function(){
-
-      let container = document.getElementById('otherPhotoContainer');
-      if(!container){
-        container = document.createElement('div');
-        container.id = 'otherPhotoContainer';
-        container.style.marginTop = '10px';
-        otherBox.appendChild(container);
-      }
-
-      const qty = parseInt(this.value || 0);
-
-      while(container.children.length < qty){
-        const div = document.createElement('div');
-        div.style.marginBottom = '10px';
-        div.innerHTML = `
-          <label>รูปภาพสัตว์ลำดับที่ ${container.children.length+1}</label>
-          <input type="file"
-                 class="otherPetPhoto"
-                 accept="image/*"
-                 capture="environment">
-        `;
-        container.appendChild(div);
-      }
-
-      while(container.children.length > qty){
-        container.removeChild(container.lastChild);
-      }
-
-    });
-  }
-
-  /* ---------------------------
-     HARD LOCK บังคับเฉพาะ สุนัข/แมว
-  ----------------------------*/
-  document.addEventListener('submit', function(e){
-
-    const form = e.target;
-    if(!form || form.id !== 'surveyForm') return;
-
-    const type = document.getElementById('animalType')?.value;
-
-    if(type === 'สุนัข' || type === 'แมว'){
-      const cards = document.querySelectorAll('.pet-card');
-
-      for(let i=0;i<cards.length;i++){
-        const fileInput = cards[i].querySelector('.petPhoto');
-        if(!fileInput || !fileInput.files.length){
-          alert(`สัตว์ตัวที่ ${i+1} : กรุณาอัปโหลดรูปภาพ`);
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          return;
-        }
-      }
-    }
-
-  }, true);
-
-})();
-</script>
-<script>
-/* ==================================================
-   FINAL FETCH OVERRIDE (ตัวเดียวจบทั้งระบบ)
-   แนบ:
-   - homePhone
-   - ownerPhoto
-   - petPhoto ทุกตัว
-================================================== */
-(function () {
-
-  const originalFetch = window.fetch;
-
-  window.fetch = async function (url, options) {
-
-    if (!options || typeof options.body !== 'string') {
-      return originalFetch.call(this, url, options);
-    }
-
-    try {
-
-      const data = JSON.parse(options.body);
-
-      /* ===== เบอร์บ้าน ===== */
-      const homePhone = document.getElementById('homePhone');
-      if (homePhone) {
-        data.homePhone = homePhone.value || '';
-      }
-
-      /* ===== รูปเจ้าของ ===== */
-      const ownerFile = document.getElementById('ownerPhoto');
-      if (ownerFile && ownerFile.files && ownerFile.files[0]) {
-        data.ownerPhotoBase64 = await toBase64(ownerFile.files[0]);
-      }
-
-      /* ===== รูปสัตว์ทุกตัว ===== */
-      if (data.pets && data.pets.length) {
-
-        const cards = document.querySelectorAll('.pet-card');
-
-        for (let i = 0; i < cards.length; i++) {
-
-          const fileInput = cards[i].querySelector('.petPhoto');
-
-          if (fileInput && fileInput.files && fileInput.files[0]) {
-            data.pets[i].petPhotoBase64 =
-              await compressImage(fileInput.files[0]);
-          } else {
-            data.pets[i].petPhotoBase64 = '';
-          }
-
-        }
-      }
-
-      options.body = JSON.stringify(data);
-      return originalFetch.call(this, url, options);
-
-    } catch (err) {
-      console.error(err);
-      return originalFetch.call(this, url, options);
-    }
-  };
-
-  function toBase64(file) {
-    return new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = e => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function compressImage(file, maxWidth = 800, quality = 0.7) {
-    return new Promise(resolve => {
-      const img = new Image();
-      const reader = new FileReader();
-
-      reader.onload = e => img.src = e.target.result;
-
-      img.onload = function () {
-        const canvas = document.createElement('canvas');
-        const scale = Math.min(maxWidth / img.width, 1);
-
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-
-      reader.readAsDataURL(file);
-    });
-  }
-
-})();
-</script>
-<script>
-/* ==========================================
-   AUTO DETECT pet-card แล้วเพิ่มช่องรูป
-   FINAL VERSION (ใช้ตัวนี้ตัวเดียว)
-========================================== */
-
-(function(){
-
-  function addPhotoBox(card){
-
-    if(card.querySelector('.petPhotoBox')) return;
-
-    const div = document.createElement('div');
-    div.className = 'petPhotoBox';
-    div.style.marginTop = '10px';
-
-    div.innerHTML = `
-      <label>รูปภาพสัตว์เลี้ยง</label>
-      <img class="petPhotoPreview"
-           style="width:120px;height:120px;object-fit:cover;border-radius:8px;display:none;margin-bottom:6px;">
-      <input type="file"
-             class="petPhoto"
-             accept="image/*"
-             capture="environment">
-    `;
-
-    card.appendChild(div);
-
-    const input = div.querySelector('.petPhoto');
-    const preview = div.querySelector('.petPhotoPreview');
-
-    input.addEventListener('change', function(){
-      const file = this.files[0];
-      if(!file || !file.type.startsWith('image/')) return;
-
-      const reader = new FileReader();
-      reader.onload = e=>{
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  const observer = new MutationObserver(function(){
-
-    const type = document.getElementById('animalType')?.value;
-    if(type !== 'สุนัข' && type !== 'แมว') return;
-    document.querySelectorAll('.pet-card').forEach(card=>{
-      addPhotoBox(card);
-    });
-
-  });
-
-  observer.observe(document.body,{
-    childList:true,
-    subtree:true
-  });
-
-})();
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-  const sub = document.getElementById('subdistrict');
-  const dis = document.getElementById('district');
-  const pro = document.getElementById('province');
-
-  if (sub) {
-    sub.value = 'ในเมือง';
-    sub.readOnly = true;
-    sub.style.background = '#eee';
-  }
-
-  if (dis) {
-    dis.value = 'เมือง';
-    dis.readOnly = true;
-    dis.style.background = '#eee';
-  }
-
-  if (pro) {
-    pro.value = 'อุบลราชธานี';
-    pro.readOnly = true;
-    pro.style.background = '#eee';
-  }
-
-});
-</script>
-<script>
-
-/* ==============================
-1. จำกัดการกรอกตัวเลข อายุ
-============================== */
-
-document.addEventListener("input",function(e){
-
-if(e.target.classList.contains("ageYear") || 
-   e.target.classList.contains("ageMonth")){
-
-   e.target.value = e.target.value.replace(/[^0-9]/g,'')
-
-}
-
-})
-
-
-/* ==============================
-2. ไทย + อังกฤษ เท่านั้น
-============================== */
-
-function allowThaiEng(input){
-
-input.addEventListener("input",function(){
-
-this.value = this.value.replace(/[^a-zA-Zก-๙\s]/g,'')
-
-})
-
-}
-
-document.addEventListener("DOMContentLoaded",function(){
-
-const owner = document.getElementById("recorderName")
-
-if(owner) allowThaiEng(owner)
-
-})
-
-
-/* ==============================
-3. แก้ประเภทสัตว์
-============================== */
-
-document.addEventListener("DOMContentLoaded",function(){
-
-const animalType = document.getElementById("animalType")
-
-animalType.innerHTML = `
 <option value="">-- เลือก --</option>
 <option>ไม่มี</option>
 <option>สุนัขมีเจ้าของ</option>
@@ -1860,114 +337,1686 @@ animalType.innerHTML = `
 <option>แพะ</option>
 <option>ม้า</option>
 <option value="อื่นๆโปรดระบุ">อื่น ๆ โปรดระบุ</option>
-`
 
-})
+</select>
 
+<div id="otherAnimalBox" style="display:none">
 
-/* ==============================
-4. บังคับ/ไม่บังคับข้อมูล
-============================== */
+<label>ระบุชนิดสัตว์</label>
 
-document.addEventListener("change",function(e){
+<input
+    type="text"
+    id="otherAnimalType"
+    placeholder="เช่น กระต่าย, เต่า">
 
-if(e.target.id === "animalType"){
+<label>ระบุจำนวน</label>
 
-const type = e.target.value
+<input
+    type="number"
+    id="otherAnimalQty"
+    min="1">
 
-const pets = document.querySelectorAll(".pet-card")
+</div>
 
-pets.forEach(card=>{
+<div id="petQtyBox">
 
-const name = card.querySelector(".petName")
-const gender = card.querySelector(".gender")
-const ageYear = card.querySelector(".ageYear")
-const ageMonth = card.querySelector(".ageMonth")
-const color = card.querySelector(".color")
+<label>จำนวนสัตว์เลี้ยง</label>
 
-if(type === "สุนัขไม่มีเจ้าของ" || type === "แมวไม่มีเจ้าของ"){
+<input
+    type="number"
+    id="petQty"
+    min="0"
+    max="100"
+    value="0">
 
-name.required=false
-gender.required=false
-ageYear.required=false
-ageMonth.required=false
-color.required=false
+</div>
 
-}else{
+<div id="petList"></div>
 
-name.required=true
-gender.required=true
-ageYear.required=true
-ageMonth.required=true
-color.required=true
+<h3>ข้อมูลผู้บันทึก</h3>
 
-}
+<label>
+ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล(ชื่อ-นามสกุล)
+</label>
 
-})
+<input type="text" id="recorderName" required>
 
-}
+<label>ตำแหน่ง</label>
 
-})
+<select id="recorderRole" required>
 
-/* ==============================
-6. บังคับอัพรูป (กรณีไม่มีเจ้าของ)
-============================== */
+<option value="">-- เลือกตำแหน่ง --</option>
 
-document.addEventListener("change",function(e){
+<option>เจ้าของสัตว์เลี้ยง</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 1</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 2</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 3</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 4</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 5</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 6</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 7</option>
 
-if(e.target.id==="animalType"){
+</select>
 
-const type = e.target.value
-const photo = document.getElementById("animalPhoto")
+<label>
+หมายเลขบัตรประชาชน เจ้าของสัตว์เลี้ยง (13 หลัก)
+</label>
 
-if(!photo) return
+<input
+    type="text"
+    id="citizenId"
+    maxlength="13"
+    minlength="13"
+    pattern="\d{13}"
+    required>
 
-if(type==="สุนัขไม่มีเจ้าของ" || type==="แมวไม่มีเจ้าของ"){
+<h3 style="margin-top:20px">
+ข้อมูลเจ้าของสัตว์
+</h3>
 
-photo.required = true
+<div class="owner-photo-wrap">
 
-}else{
+<label>
+รูปโปรไฟล์เจ้าของสัตว์เลี้ยง
+</label>
 
-photo.required = false
+<img
+    id="ownerPhotoPreview"
+    class="photo-preview"
+    alt="preview">
 
-}
+<input
+    type="file"
+    id="ownerPhoto"
+    accept="image/*"
+    capture="environment"
+    required>
 
-}
+</div>
 
-})
+<label>บ้านเลขที่ เจ้าของสัตว์เลี้ยง</label>
+<input id="addrNo" required>
 
-</script>
+<label>ถนน</label>
+<input id="road" required>
+
+<label>ซอย</label>
+<input id="soi">
+
+<label>ตำบล</label>
+
+<input
+    id="subdistrict"
+    value="ในเมือง"
+    readonly
+    style="background:#eee"
+    required>
+
+<label>อำเภอ</label>
+
+<input
+    id="district"
+    value="เมือง"
+    readonly
+    style="background:#eee"
+    required>
+
+<label>จังหวัด</label>
+
+<input
+    id="province"
+    value="อุบลราชธานี"
+    readonly
+    style="background:#eee"
+    required>
+
+<label>เบอร์โทรศัพท์</label>
+
+<input
+    type="text"
+    id="phone"
+    maxlength="10"
+    pattern="\d{10}"
+    required>
+
+<label>เบอร์โทรศัพท์บ้าน</label>
+
+<input
+    type="text"
+    id="homePhone"
+    placeholder="เช่น 045-123456"
+    pattern="[0-9-]+">
+
+<label>
+สถานที่เลี้ยง <span style="color:red">*</span>
+</label>
+
+<select id="raisingPlace" required>
+
+<option value="">
+-- กรุณาเลือกสถานที่เลี้ยง --
+</option>
+
+<option value="ไม่ใช่สถานที่เดียวกับเจ้าของสัตว์">
+ไม่ใช่สถานที่เดียวกับเจ้าของสัตว์
+</option>
+
+<option value="สถานที่เดียวกับเจ้าของสัตว์">
+สถานที่เดียวกับเจ้าของสัตว์
+</option>
+
+<option value="ไม่มี">
+ไม่มี
+</option>
+
+</select>
+
+<button type="submit" class="save-button">
+บันทึกข้อมูล
+</button>
+
+</form>
+
+<p id="status" class="status"></p>
+
+</main>
+</div>
+
+<footer>
+© เทศบาลนครอุบลราชธานี |
+กองสาธารณสุขและสิ่งแวดล้อม |
+งานสัตวแพทย์ |
+045-246060 ต่อ 180 280
+</footer>
+
 <script>
 
-document.addEventListener("change",function(e){
+/* =====================================================
+   GOOGLE APPS SCRIPT
+===================================================== */
 
-if(e.target.id === "animalType"){
+const GAS_URL =
+"https://script.google.com/macros/s/AKfycbxxbwaoWlvcC9OmZtL3AZI7teRO_ljfjaQER35UcfERohfyOFdnIdAu-7BGxuQQzvdZ/exec";
 
-const type = e.target.value
 
-const photo = document.querySelector('input[type="file"]')
+/* =====================================================
+   รายชื่อชุมชน
+===================================================== */
 
-if(!photo) return
+const communitiesByCenter = {
 
-if(type === "สุนัขไม่มีเจ้าของ" || type === "แมวไม่มีเจ้าของ"){
+1: [
+'ชุมชนวัดไชยมงคล',
+'ชุมชนวัดสุปัฏน์',
+'ชุมชนวัดศรีอุบลรัตนาราม',
+'ชุมชนศาลาประชาคม',
+'ชุมชนโรงเรียนอนุบาลอุบล',
+'ชุมชนวัดทุ่งศรีเมือง 1',
+'ชุมชนวัดทุ่งศรีเมือง 2',
+'ชุมชนวัดหลวง 1',
+'ชุมชนวัดหลวง 2',
+'ชุมชนวัดกลาง',
+'ชุมชนวัดเลียบ 1',
+'ชุมชนวัดเลียบ 2',
+'ชุมชนโรงเรียนเทศบาลบูรพา 1',
+'ชุมชนโรงเรียนเทศบาลบูรพา 2'
+],
 
-photo.required = true
+2: [
+'โรงเรียนบ้านก้านเหลือง 1',
+'โรงเรียนบ้านก้านเหลือง 2',
+'โรงเรียนบ้านก้านเหลือง 3',
+'วัดพระธาตุหนองบัว 1',
+'วัดพระธาตุหนองบัว 2',
+'โรงเรียนเทศบาล 2 หนองบัว',
+'โรงเรียนโปลีเทคนิค 1',
+'โรงเรียนโปลีเทคนิค 2',
+'ศาลาหนองนาควาย 1',
+'ศาลาหนองนาควาย 2',
+'วัดบ้านนาควาย 1',
+'วัดบ้านนาควาย 2',
+'โรงเรียนเมืองอุบล 1',
+'โรงเรียนเมืองอุบล 2'
+],
 
-}else{
+3: [
+'ถนนพนม 1',
+'ถนนพนม 2',
+'โรงเรียนเบ็ญจะมะ 3',
+'โรงเรียนเบ็ญจะมะ 4',
+'วัดท่าวังหิน',
+'หลังโรงเรียนเยาวเรศ 1',
+'หลังโรงเรียนเยาวเรศ 2',
+'หลังโรงเรียนเยาวเรศ 3',
+'หลังโรงเรียนเยาวเรศ 4',
+'ชุมชนสำนักงานที่ดินจังหวัดฯ',
+'วัดโรมันคาทอลิค',
+'โรงเรียนสามัคคี 3',
+'วัดกุดคูณ',
+'วิทยาลัยสารพัดช่าง'
+],
 
-photo.required = false
+4: [
+'วัดพลแพน',
+'ตลาดสดเทศบาล 5',
+'ศาลากลางบ้านดู่ 1',
+'ศาลากลางบ้านดู่ 2',
+'ศาลากลางบ้านดู่ 3',
+'ศาลากลางบ้านดู่ 4',
+'วัดศรีประดู่ 1',
+'วัดศรีประดู่ 2',
+'วัดบูรพา 1',
+'วัดบูรพา 2',
+'วัดบูรพา 3',
+'วัดเลียบ 3'
+],
 
+5: [
+'วังทอง',
+'วัดศรีแสงทอง',
+'สหกรณ์การเกษตร 1',
+'สหกรณ์การเกษตร 2',
+'สหกรณ์การเกษตร 3',
+'ดอนเจ้าปู่ทองแดง 1',
+'ดอนเจ้าปู่ทองแดง 2',
+'โรงเรียนปทุมวิทยากร 1',
+'โรงเรียนปทุมวิทยากร 2',
+'สำนักงานขนส่งจังหวัด',
+'อุปลีสาน 6',
+'วัดสารพัฒนึก 1',
+'วัดสารพัฒนึก 2',
+'วิทยาลัยพยาบาล',
+'ทางเข้าคริสตจักร'
+],
+
+6: [
+'เฉลิมพระเกียรติ 1',
+'เฉลิมพระเกียรติ 2',
+'วัดป่าแสนอุดม 1',
+'วัดป่าแสนอุดม 2',
+'วัดป่าแสนอุดม 3',
+'ต้นซอยสุขาอุปถัมภ์ 11',
+'ท้ายซอยสุขาอุปถัมภ์ 11',
+'พระศรีมหาโพธิ์ 1',
+'พระศรีมหาโพธิ์ 2'
+],
+
+7: [
+'สนามกีฬากลาง 1',
+'สนามกีฬากลาง 2',
+'สนามกีฬากลาง 3',
+'ชยางกูร 2.1 (1)',
+'ชยางกูร 2.1 (2)',
+'โรงเรียนนารีนุกูล',
+'อยู่วงศ์ธรรม',
+'โรงเรียนอัสสัมชัญ 1',
+'โรงเรียนอัสสัมชัญ 2',
+'วัดทองนพคุณ',
+'วัดปทุมมาลัย 1',
+'วัดปทุมมาลัย 2',
+'วัดแจ้ง 1',
+'วัดแจ้ง 2',
+'โรงเรียนอุบลวิทยาคม 1',
+'โรงเรียนอุบลวิทยาคม 2',
+'วัดมหาวนาราม 1',
+'วัดมหาวนาราม 2',
+'วัดมณีวนาราม',
+'ศาลเยาวชนและครอบครัว',
+'วัดสว่างอารมณ์ 1',
+'วัดสว่างอารมณ์ 2',
+'โรงเรียนสามัคคี 1',
+'โรงเรียนสามัคคี 2',
+'วิทยาลัยเทคนิค 1',
+'วิทยาลัยเทคนิค 2',
+'โรงเรียนเบ็ญจะมะ 1',
+'โรงเรียนเบ็ญจะมะ 2'
+]
+
+};
+
+
+/* =====================================================
+   ชื่อศูนย์
+===================================================== */
+
+const centerNames = {
+1: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 1',
+2: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 2',
+3: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 3',
+4: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 4',
+5: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 5',
+6: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 6',
+7: 'ศูนย์บริการสาธารณสุขศูนย์ที่ 7'
+};
+
+
+/* =====================================================
+   เปิดหน้าแบบสำรวจ
+   เปลี่ยนหน้าโดยซ่อนหน้าเดิม
+===================================================== */
+
+function openForm(center) {
+
+    const centerPage = document.getElementById('centerPage');
+    const formPage = document.getElementById('formPage');
+
+    const centerId = document.getElementById('centerId');
+    const centerName = document.getElementById('centerName');
+    const centerLabel = document.getElementById('centerLabel');
+
+    centerId.value = center;
+    centerName.value = centerNames[center];
+
+    centerLabel.textContent =
+        'ศูนย์ที่กำลังบันทึกข้อมูล: ' + centerNames[center];
+
+    loadCommunities(center);
+
+    /* สำคัญ: เปลี่ยนหน้า */
+    centerPage.classList.remove('page-visible');
+    centerPage.classList.add('page-hidden');
+
+    formPage.classList.remove('page-hidden');
+    formPage.classList.add('page-visible');
+
+    /* กลับไปบนสุด */
+    window.scrollTo(0, 0);
 }
 
+
+/* =====================================================
+   กลับหน้าเลือกศูนย์
+===================================================== */
+
+function backToCenter() {
+
+    if (
+        !confirm(
+            'ต้องการกลับไปเลือกศูนย์หรือไม่? ข้อมูลที่ยังไม่ได้บันทึกจะหาย'
+        )
+    ) {
+        return;
+    }
+
+    const centerPage = document.getElementById('centerPage');
+    const formPage = document.getElementById('formPage');
+
+    formPage.classList.remove('page-visible');
+    formPage.classList.add('page-hidden');
+
+    centerPage.classList.remove('page-hidden');
+    centerPage.classList.add('page-visible');
+
+    window.scrollTo(0, 0);
 }
 
-})
+
+/* =====================================================
+   โหลดชุมชน
+===================================================== */
+
+function loadCommunities(center) {
+
+    const select =
+        document.getElementById('communitySelect');
+
+    select.innerHTML =
+        '<option value="">-- เลือกชุมชน --</option>';
+
+    const list = communitiesByCenter[center] || [];
+
+    list.forEach(function(name) {
+
+        const option =
+            document.createElement('option');
+
+        option.value = name;
+        option.textContent = name;
+
+        select.appendChild(option);
+    });
+}
+
+
+/* =====================================================
+   ตัวแปรสัตว์
+===================================================== */
+
+const petQty =
+    document.getElementById('petQty');
+
+const petList =
+    document.getElementById('petList');
+
+
+/* =====================================================
+   จำนวนสัตว์
+===================================================== */
+
+petQty.addEventListener('input', function() {
+
+    let qty = parseInt(this.value || 0);
+
+    if (qty < 0) qty = 0;
+    if (qty > 100) qty = 100;
+
+    this.value = qty;
+
+    while (petList.children.length < qty) {
+
+        petList.appendChild(
+            createPetCard(
+                petList.children.length + 1
+            )
+        );
+    }
+
+    while (petList.children.length > qty) {
+
+        petList.removeChild(
+            petList.lastChild
+        );
+    }
+});
+
+
+/* =====================================================
+   สร้าง Card สัตว์
+===================================================== */
+
+function createPetCard(no) {
+
+    const div = document.createElement('div');
+
+    div.className = 'pet-card';
+
+    div.innerHTML = `
+
+<strong>สัตว์ตัวที่ ${no}</strong>
+
+<label>ชื่อสัตว์</label>
+<input class="petName">
+
+<label>เพศ</label>
+
+<select class="gender">
+<option>ผู้</option>
+<option>เมีย</option>
+<option>ไม่ระบุ</option>
+</select>
+
+<label>อายุ (ปี)</label>
+<input type="number" class="ageYear" min="0">
+
+<label>อายุ (เดือน)</label>
+<input type="number" class="ageMonth" min="0" max="11">
+
+<label>สี / ตำหนิ</label>
+<input class="color">
+
+<label>การทำหมัน</label>
+
+<select class="sterilization">
+<option>ยังไม่ทำหมัน</option>
+<option>ทำหมันแล้ว</option>
+<option>ฉีดยาคุม</option>
+</select>
+
+<div class="contraceptiveBox" style="display:none">
+
+<label>วันที่ฉีดยาคุม</label>
+<input type="date" class="contraceptiveDate">
+
+<label>ผู้ฉีดยาคุม</label>
+
+<select class="contraceptiveVet">
+
+<option value="">-- เลือก --</option>
+<option>เทศบาลนครอุบลราชธานี / งานสัตวแพทย์</option>
+<option>คลินิก / โรงพยาบาลสัตว์</option>
+<option>อาสาปศุสัตว์ที่ได้รับแต่งตั้ง</option>
+<option>คนรู้จัก</option>
+<option>ฉีดเอง</option>
+<option>อื่นๆ</option>
+
+</select>
+
+<input
+    class="contraceptiveVetName"
+    placeholder="ระบุชื่อผู้ฉีด"
+    style="display:none">
+
+</div>
+
+<label>วัคซีนพิษสุนัขบ้า</label>
+
+<select class="rabies">
+
+<option>
+ไม่เคยฉีดวัคซีนพิษสุนัขบ้า
+</option>
+
+<option>
+เคยฉีดวัคซีนพิษสุนัขบ้า
+</option>
+
+</select>
+
+<div class="rabiesBox" style="display:none">
+
+<label>วันที่ฉีดวัคซีนพิษสุนัขบ้าล่าสุด</label>
+<input type="date" class="rabiesDate">
+
+<label>สัตวแพทย์ผู้ฉีดวัคซีนพิษสุนัขบ้า</label>
+
+<select class="rabiesVet">
+
+<option value="">-- เลือก --</option>
+<option>เทศบาลนครอุบลราชธานี / งานสัตวแพทย์</option>
+<option>คลินิก / โรงพยาบาลสัตว์</option>
+<option>อาสาปศุสัตว์ที่ได้รับแต่งตั้ง</option>
+<option>คนรู้จัก</option>
+<option>ฉีดเอง</option>
+<option>อื่นๆ</option>
+
+</select>
+
+<input
+    class="rabiesVetName"
+    placeholder="ระบุชื่อผู้ฉีด"
+    style="display:none">
+
+</div>
+
+<label>วิธีการเลี้ยง</label>
+
+<select class="raising">
+
+<option>เลี้ยงในพื้นที่จำกัดตลอดเวลา</option>
+<option>เลี้ยงในพื้นที่จำกัดบางเวลา</option>
+<option>เลี้ยงแบบปล่อยตลอดเวลา</option>
+
+</select>
+
+<label>สถานที่เลี้ยง</label>
+
+<select class="location">
+
+<option>บ้านพักอาศัย</option>
+<option>สถานที่ราชการ</option>
+<option>วัด</option>
+<option>ตลาด</option>
+<option>บริเวณหมู่บ้าน</option>
+<option>สถานที่เอกชน</option>
+
+</select>
+
+<div
+    class="petPhotoBox"
+    style="margin-top:10px">
+
+<label>รูปภาพสัตว์เลี้ยง</label>
+
+<img
+    class="petPhotoPreview photo-preview">
+
+<input
+    type="file"
+    class="petPhoto"
+    accept="image/*"
+    capture="environment">
+
+</div>
+`;
+
+
+    /* ===============================
+       รูปสัตว์
+    =============================== */
+
+    const photo =
+        div.querySelector('.petPhoto');
+
+    const preview =
+        div.querySelector('.petPhotoPreview');
+
+    photo.addEventListener(
+        'change',
+        function() {
+
+            const file = this.files[0];
+
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+
+                alert(
+                    'กรุณาเลือกไฟล์รูปภาพเท่านั้น'
+                );
+
+                this.value = '';
+                return;
+            }
+
+            const reader =
+                new FileReader();
+
+            reader.onload =
+                function(e) {
+
+                    preview.src =
+                        e.target.result;
+
+                    preview.style.display =
+                        'block';
+                };
+
+            reader.readAsDataURL(file);
+        }
+    );
+
+
+    /* ===============================
+       ทำหมัน
+    =============================== */
+
+    const sterilization =
+        div.querySelector('.sterilization');
+
+    const contraceptiveBox =
+        div.querySelector('.contraceptiveBox');
+
+    sterilization.addEventListener(
+        'change',
+        function() {
+
+            if (this.value === 'ฉีดยาคุม') {
+
+                contraceptiveBox.style.display =
+                    'block';
+
+            } else {
+
+                contraceptiveBox.style.display =
+                    'none';
+            }
+        }
+    );
+
+
+    /* ===============================
+       ผู้ฉีดยาคุม
+    =============================== */
+
+    const contraceptiveVet =
+        div.querySelector('.contraceptiveVet');
+
+    const contraceptiveVetName =
+        div.querySelector('.contraceptiveVetName');
+
+    contraceptiveVet.addEventListener(
+        'change',
+        function() {
+
+            if (this.value === 'อื่นๆ') {
+
+                contraceptiveVetName.style.display =
+                    'block';
+
+            } else {
+
+                contraceptiveVetName.style.display =
+                    'none';
+
+                contraceptiveVetName.value = '';
+            }
+        }
+    );
+
+
+    /* ===============================
+       วัคซีนพิษสุนัขบ้า
+    =============================== */
+
+    const rabies =
+        div.querySelector('.rabies');
+
+    const rabiesBox =
+        div.querySelector('.rabiesBox');
+
+    rabies.addEventListener(
+        'change',
+        function() {
+
+            if (
+                this.value ===
+                'เคยฉีดวัคซีนพิษสุนัขบ้า'
+            ) {
+
+                rabiesBox.style.display =
+                    'block';
+
+            } else {
+
+                rabiesBox.style.display =
+                    'none';
+            }
+        }
+    );
+
+
+    /* ===============================
+       ผู้ฉีดวัคซีน
+    =============================== */
+
+    const rabiesVet =
+        div.querySelector('.rabiesVet');
+
+    const rabiesVetName =
+        div.querySelector('.rabiesVetName');
+
+    rabiesVet.addEventListener(
+        'change',
+        function() {
+
+            if (this.value === 'อื่นๆ') {
+
+                rabiesVetName.style.display =
+                    'block';
+
+            } else {
+
+                rabiesVetName.style.display =
+                    'none';
+
+                rabiesVetName.value = '';
+            }
+        }
+    );
+
+
+    return div;
+}
+
+
+/* =====================================================
+   ประเภทสัตว์
+===================================================== */
+
+const animalType =
+    document.getElementById('animalType');
+
+animalType.addEventListener(
+    'change',
+    function() {
+
+        const type = this.value;
+
+        const otherBox =
+            document.getElementById(
+                'otherAnimalBox'
+            );
+
+        const otherType =
+            document.getElementById(
+                'otherAnimalType'
+            );
+
+        const otherQty =
+            document.getElementById(
+                'otherAnimalQty'
+            );
+
+        const petQtyBox =
+            document.getElementById(
+                'petQtyBox'
+            );
+
+        if (type === 'อื่นๆโปรดระบุ') {
+
+            otherBox.style.display =
+                'block';
+
+            otherType.required = true;
+            otherQty.required = true;
+
+            petQty.value = 0;
+            petList.innerHTML = '';
+
+            petQtyBox.style.display =
+                'none';
+
+        } else {
+
+            otherBox.style.display =
+                'none';
+
+            otherType.required = false;
+            otherQty.required = false;
+
+            otherType.value = '';
+            otherQty.value = '';
+
+            petQtyBox.style.display =
+                'block';
+        }
+    }
+);
+
+
+/* =====================================================
+   รูปเจ้าของ
+===================================================== */
+
+const ownerPhoto =
+    document.getElementById('ownerPhoto');
+
+const ownerPreview =
+    document.getElementById(
+        'ownerPhotoPreview'
+    );
+
+ownerPhoto.addEventListener(
+    'change',
+    function() {
+
+        const file = this.files[0];
+
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+
+            alert(
+                'กรุณาเลือกไฟล์รูปภาพเท่านั้น'
+            );
+
+            this.value = '';
+            return;
+        }
+
+        const reader =
+            new FileReader();
+
+        reader.onload =
+            function(e) {
+
+                ownerPreview.src =
+                    e.target.result;
+
+                ownerPreview.style.display =
+                    'block';
+            };
+
+        reader.readAsDataURL(file);
+    }
+);
+
+
+/* =====================================================
+   จำกัดชื่อผู้สำรวจ
+===================================================== */
+
+document
+.getElementById('recorderName')
+.addEventListener(
+    'input',
+    function() {
+
+        this.value =
+            this.value.replace(
+                /[^a-zA-Zก-๙\s]/g,
+                ''
+            );
+    }
+);
+
+
+/* =====================================================
+   เบอร์โทร
+===================================================== */
+
+document
+.getElementById('phone')
+.addEventListener(
+    'input',
+    function() {
+
+        this.value =
+            this.value.replace(
+                /[^0-9]/g,
+                ''
+            );
+    }
+);
+
+
+/* =====================================================
+   ส่งข้อมูล
+===================================================== */
+
+document
+.getElementById('surveyForm')
+.addEventListener(
+    'submit',
+    async function(e) {
+
+        e.preventDefault();
+
+        /* ===============================
+           ผู้สำรวจ
+        =============================== */
+
+        const recorder =
+            document.getElementById(
+                'recorderName'
+            );
+
+        if (!recorder.value.trim()) {
+
+            alert(
+                'กรุณากรอก ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล'
+            );
+
+            recorder.focus();
+            return;
+        }
+
+
+        /* ===============================
+           เบอร์โทร
+        =============================== */
+
+        const phone =
+            document.getElementById('phone');
+
+        if (!/^\d{10}$/.test(phone.value)) {
+
+            alert(
+                'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก'
+            );
+
+            phone.focus();
+            return;
+        }
+
+
+        /* ===============================
+           บัตรประชาชน
+        =============================== */
+
+        const citizen =
+            document.getElementById(
+                'citizenId'
+            );
+
+        if (!/^\d{13}$/.test(citizen.value)) {
+
+            alert(
+                'กรุณากรอกหมายเลขบัตรประชาชน 13 หลัก'
+            );
+
+            citizen.focus();
+            return;
+        }
+
+
+        /* ===============================
+           รูปเจ้าของ
+        =============================== */
+
+        if (!ownerPhoto.files.length) {
+
+            alert(
+                'กรุณาอัปโหลดรูปโปรไฟล์เจ้าของสัตว์เลี้ยง'
+            );
+
+            ownerPhoto.focus();
+            return;
+        }
+
+
+        /* ===============================
+           ตรวจสัตว์
+        =============================== */
+
+        const type =
+            animalType.value;
+
+        if (
+            type === 'สุนัขมีเจ้าของ' ||
+            type === 'แมวมีเจ้าของ' ||
+            type === 'สุนัขไม่มีเจ้าของ' ||
+            type === 'แมวไม่มีเจ้าของ'
+        ) {
+
+            const cards =
+                document.querySelectorAll(
+                    '.pet-card'
+                );
+
+            if (cards.length === 0) {
+
+                alert(
+                    'กรุณาระบุจำนวนสัตว์เลี้ยง'
+                );
+
+                return;
+            }
+
+
+            for (
+                let i = 0;
+                i < cards.length;
+                i++
+            ) {
+
+                const card = cards[i];
+
+                const photo =
+                    card.querySelector(
+                        '.petPhoto'
+                    );
+
+
+                if (!photo.files.length) {
+
+                    alert(
+                        `สัตว์ตัวที่ ${i + 1} : กรุณาอัปโหลดรูปภาพ`
+                    );
+
+                    photo.focus();
+                    return;
+                }
+
+
+                if (
+                    type !== 'สุนัขไม่มีเจ้าของ' &&
+                    type !== 'แมวไม่มีเจ้าของ'
+                ) {
+
+                    if (
+                        !card
+                        .querySelector('.petName')
+                        .value.trim()
+                    ) {
+
+                        alert(
+                            `สัตว์ตัวที่ ${i + 1} : กรุณากรอกชื่อสัตว์`
+                        );
+
+                        return;
+                    }
+                }
+
+
+                if (
+                    !card.querySelector(
+                        '.ageYear'
+                    ).value &&
+                    !card.querySelector(
+                        '.ageMonth'
+                    ).value
+                ) {
+
+                    alert(
+                        `สัตว์ตัวที่ ${i + 1} : กรุณากรอกอายุ`
+                    );
+
+                    return;
+                }
+
+
+                if (
+                    card.querySelector(
+                        '.rabies'
+                    ).value ===
+                    'เคยฉีดวัคซีนพิษสุนัขบ้า'
+                ) {
+
+                    if (
+                        !card.querySelector(
+                            '.rabiesDate'
+                        ).value ||
+                        !card.querySelector(
+                            '.rabiesVet'
+                        ).value
+                    ) {
+
+                        alert(
+                            `สัตว์ตัวที่ ${i + 1} : กรุณากรอกข้อมูลวัคซีนพิษสุนัขบ้าให้ครบ`
+                        );
+
+                        return;
+                    }
+                }
+
+
+                if (
+                    card.querySelector(
+                        '.sterilization'
+                    ).value ===
+                    'ฉีดยาคุม'
+                ) {
+
+                    if (
+                        !card.querySelector(
+                            '.contraceptiveVet'
+                        ).value
+                    ) {
+
+                        alert(
+                            `สัตว์ตัวที่ ${i + 1} : กรุณาเลือกผู้ฉีดยาคุม`
+                        );
+
+                        return;
+                    }
+                }
+            }
+        }
+
+
+        /* ===============================
+           สร้าง pets
+        =============================== */
+
+        let pets = [];
+
+        document
+        .querySelectorAll('.pet-card')
+        .forEach(
+            function(card, i) {
+
+                function getVet(
+                    selectClass,
+                    nameClass
+                ) {
+
+                    const select =
+                        card.querySelector(
+                            selectClass
+                        );
+
+                    if (!select) return '';
+
+                    if (
+                        select.value ===
+                        'อื่นๆ'
+                    ) {
+
+                        const name =
+                            card.querySelector(
+                                nameClass
+                            );
+
+                        return name
+                            ? name.value
+                            : '';
+                    }
+
+                    return select.value;
+                }
+
+
+                pets.push({
+
+                    no: i + 1,
+
+                    name:
+                        card.querySelector(
+                            '.petName'
+                        )?.value || '',
+
+                    gender:
+                        card.querySelector(
+                            '.gender'
+                        )?.value || '',
+
+                    ageYear:
+                        card.querySelector(
+                            '.ageYear'
+                        )?.value || '',
+
+                    ageMonth:
+                        card.querySelector(
+                            '.ageMonth'
+                        )?.value || '',
+
+                    color:
+                        card.querySelector(
+                            '.color'
+                        )?.value || '',
+
+                    sterilization:
+                        card.querySelector(
+                            '.sterilization'
+                        )?.value || '',
+
+                    contraceptiveDate:
+                        card.querySelector(
+                            '.contraceptiveDate'
+                        )?.value || '',
+
+                    contraceptiveVet:
+                        getVet(
+                            '.contraceptiveVet',
+                            '.contraceptiveVetName'
+                        ),
+
+                    rabies:
+                        card.querySelector(
+                            '.rabies'
+                        )?.value || '',
+
+                    rabiesDate:
+                        card.querySelector(
+                            '.rabiesDate'
+                        )?.value || '',
+
+                    rabiesVet:
+                        getVet(
+                            '.rabiesVet',
+                            '.rabiesVetName'
+                        ),
+
+                    raisingStyle:
+                        card.querySelector(
+                            '.raising'
+                        )?.value || '',
+
+                    raisingLocation:
+                        card.querySelector(
+                            '.location'
+                        )?.value || ''
+                });
+            }
+        );
+
+
+        /* ===============================
+           อ่านรูปเจ้าของ
+        =============================== */
+
+        const ownerBase64 =
+            await readFile(
+                ownerPhoto.files[0]
+            );
+
+
+        /* ===============================
+           รูปสัตว์
+        =============================== */
+
+        const petCards =
+            document.querySelectorAll(
+                '.pet-card'
+            );
+
+        for (
+            let i = 0;
+            i < pets.length;
+            i++
+        ) {
+
+            const file =
+                petCards[i]
+                .querySelector(
+                    '.petPhoto'
+                )
+                .files[0];
+
+            if (file) {
+
+                pets[i].petPhotoBase64 =
+                    await compressImage(
+                        file
+                    );
+            }
+        }
+
+
+        /* ===============================
+           Payload
+        =============================== */
+
+        const payload = {
+
+            timestamp:
+                new Date().toISOString(),
+
+            centerId:
+                document.getElementById(
+                    'centerId'
+                ).value,
+
+            centerName:
+                document.getElementById(
+                    'centerName'
+                ).value,
+
+            year:
+                document.getElementById(
+                    'year'
+                ).value,
+
+            community:
+                document.getElementById(
+                    'communitySelect'
+                ).value,
+
+            animalType:
+                type,
+
+            otherAnimalType:
+                document.getElementById(
+                    'otherAnimalType'
+                ).value,
+
+            otherAnimalQty:
+                document.getElementById(
+                    'otherAnimalQty'
+                ).value,
+
+            ownerName:
+                recorder.value,
+
+            recorderName:
+                recorder.value,
+
+            recorderRole:
+                document.getElementById(
+                    'recorderRole'
+                ).value,
+
+            citizenId:
+                citizen.value,
+
+            phone:
+                phone.value,
+
+            homePhone:
+                document.getElementById(
+                    'homePhone'
+                ).value,
+
+            raisingArea:
+                document.getElementById(
+                    'raisingPlace'
+                ).value,
+
+            address: {
+
+                addrNo:
+                    document.getElementById(
+                        'addrNo'
+                    ).value,
+
+                road:
+                    document.getElementById(
+                        'road'
+                    ).value,
+
+                soi:
+                    document.getElementById(
+                        'soi'
+                    ).value,
+
+                subdistrict:
+                    document.getElementById(
+                        'subdistrict'
+                    ).value,
+
+                district:
+                    document.getElementById(
+                        'district'
+                    ).value,
+
+                province:
+                    document.getElementById(
+                        'province'
+                    ).value
+            },
+
+            ownerPhotoBase64:
+                ownerBase64,
+
+            pets:
+                pets
+        };
+
+
+        /* ===============================
+           ส่งข้อมูล
+        =============================== */
+
+        document.getElementById(
+            'status'
+        ).innerText =
+            '⏳ กำลังบันทึกข้อมูล...';
+
+
+        try {
+
+            const res =
+                await fetch(
+                    GAS_URL,
+                    {
+                        method: 'POST',
+                        body:
+                            JSON.stringify(
+                                payload
+                            )
+                    }
+                );
+
+
+            const result =
+                JSON.parse(
+                    await res.text()
+                );
+
+
+            if (
+                result.status ===
+                'success'
+            ) {
+
+                document.getElementById(
+                    'status'
+                ).innerText =
+                    '✅ บันทึกข้อมูลลง Google Sheet เรียบร้อย';
+
+
+                alert(
+                    'บันทึกข้อมูลเรียบร้อยแล้ว'
+                );
+
+
+                /* รีเซ็ตฟอร์ม */
+
+                this.reset();
+
+                petList.innerHTML = '';
+
+                petQty.value = 0;
+
+                ownerPreview.style.display =
+                    'none';
+
+
+                /* ===============================
+                   กลับหน้าเลือกศูนย์
+                =============================== */
+
+                const centerPage =
+                    document.getElementById(
+                        'centerPage'
+                    );
+
+                const formPage =
+                    document.getElementById(
+                        'formPage'
+                    );
+
+
+                formPage.classList.remove(
+                    'page-visible'
+                );
+
+                formPage.classList.add(
+                    'page-hidden'
+                );
+
+
+                centerPage.classList.remove(
+                    'page-hidden'
+                );
+
+                centerPage.classList.add(
+                    'page-visible'
+                );
+
+
+                window.scrollTo(
+                    0,
+                    0
+                );
+
+
+            } else {
+
+                document.getElementById(
+                    'status'
+                ).innerText =
+                    '❌ บันทึกไม่สำเร็จ: ' +
+                    (
+                        result.message ||
+                        'ไม่ทราบสาเหตุ'
+                    );
+            }
+
+
+        } catch (err) {
+
+            console.error(err);
+
+            document.getElementById(
+                'status'
+            ).innerText =
+                '❌ ไม่สามารถเชื่อมต่อ Google Script';
+        }
+
+    }
+);
+
+
+/* =====================================================
+   อ่านไฟล์
+===================================================== */
+
+function readFile(file) {
+
+    return new Promise(
+        function(resolve, reject) {
+
+            const reader =
+                new FileReader();
+
+            reader.onload =
+                function(e) {
+
+                    resolve(
+                        e.target.result
+                    );
+                };
+
+            reader.onerror =
+                reject;
+
+            reader.readAsDataURL(file);
+        }
+    );
+}
+
+
+/* =====================================================
+   บีบอัดรูปสัตว์
+===================================================== */
+
+function compressImage(
+    file,
+    maxWidth = 800,
+    quality = 0.7
+) {
+
+    return new Promise(
+        function(resolve) {
+
+            const img =
+                new Image();
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function(e) {
+
+                    img.src =
+                        e.target.result;
+                };
+
+
+            img.onload =
+                function() {
+
+                    const canvas =
+                        document.createElement(
+                            'canvas'
+                        );
+
+                    const scale =
+                        Math.min(
+                            maxWidth / img.width,
+                            1
+                        );
+
+                    canvas.width =
+                        img.width * scale;
+
+                    canvas.height =
+                        img.height * scale;
+
+
+                    const ctx =
+                        canvas.getContext(
+                            '2d'
+                        );
+
+
+                    ctx.drawImage(
+                        img,
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    );
+
+
+                    resolve(
+                        canvas.toDataURL(
+                            'image/jpeg',
+                            quality
+                        )
+                    );
+                };
+
+
+            reader.readAsDataURL(file);
+        }
+    );
+}
 
 </script>
+
 </body>
-
 </html>
-
-
-
-
