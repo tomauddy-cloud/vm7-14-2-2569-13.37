@@ -1,0 +1,724 @@
+/******************** CONFIG ********************/
+const SPREADSHEET_ID = '1yF2jIPcKXgGLDQFcsDABY-zQeoj87XquGaENwTgN8xQ';
+const ROOT_FOLDER_NAME = 'AnimalSurvey_OwnerPhotos';
+
+/******************** MASTER HEADER ********************/
+const MASTER_HEADERS = [
+"timestamp","ปีงบประมาณ","ศูนย์บริการ","ชุมชน",
+"ประเภทสัตว์","ชนิดสัตว์ (อื่น)","จำนวนสัตว์ (อื่น)",
+"ลำดับสัตว์","ชื่อสัตว์","เพศ","อายุ (ปี)","อายุ (เดือน)",
+"สี / ตำหนิ","สถานะทำหมัน","วันที่ฉีดยาคุม","สัตวแพทย์ผู้ฉีดยาคุม",
+"สถานะวัคซีนพิษสุนัขบ้า","วันที่ฉีดวัคซีน","สัตวแพทย์ผู้ฉีดวัคซีน",
+"ลักษณะการเลี้ยง","สถานที่เลี้ยง","พื้นที่การเลี้ยง",
+"ชื่อเจ้าของสัตว์","เลขบัตรประชาชน","เบอร์โทรศัพท์มือถือ",
+"เบอร์โทรศัพท์บ้าน","บ้านเลขที่","ถนน","ซอย",
+"ตำบล","อำเภอ","จังหวัด",
+"ผู้บันทึก","ตำแหน่ง",
+"ลิงก์รูปเจ้าของ","ลิงก์รูปสัตว์"
+];
+
+/******************** MAIN ********************/
+function doPost(e){
+
+const lock = LockService.getScriptLock();
+if(!lock.tryLock(10000))
+  return output_('ระบบกำลังประมวลผล กรุณาลองใหม่');
+
+try{
+
+if(!e || !e.postData || !e.postData.contents)
+  return output_('No POST data');
+
+let data={};
+try{
+  data = JSON.parse(e.postData.contents);
+}catch(err){
+  return output_('JSON ไม่ถูกต้อง');
+}
+
+const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+const timestamp = new Date();
+
+const year = safe_(data.year) || '2569';
+const centerName = safe_(data.centerName || data.center);
+const communityName = safe_(data.communityName || data.community);
+
+if(!centerName || !communityName)
+  return output_('กรุณาระบุชื่อศูนย์บริการและชุมชน');
+
+const addr = data.address || {};
+
+/************ PET STRUCTURE ************/
+let pets = [];
+
+if(Array.isArray(data.pets) && data.pets.length>0){
+  pets = data.pets;
+}
+else if(data.pet){
+  pets = [data.pet];
+}
+else{
+  pets = [data];
+}
+
+/************ SHEETS ************/
+const centerSheet = getOrCreateSheet_(ss, centerName);
+const communitySheet = getOrCreateSheet_(ss, communityName);
+
+ensureHeaders_(centerSheet);
+ensureHeaders_(communitySheet);
+
+/************ DRIVE ************/
+const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
+const yearFolder = getOrCreateFolder_(rootFolder, year);
+const centerFolder = getOrCreateFolder_(yearFolder, cleanName_(centerName));
+const communityFolder = getOrCreateFolder_(centerFolder, cleanName_(communityName));
+
+/************ OWNER FOLDER FORMAT ************/
+const ownerNameClean = cleanName_(safe_(data.ownerName)||'ไม่ระบุ');
+const addrNoClean = cleanName_(addr.addrNo || '');
+const roadClean = cleanName_(addr.road || '');
+
+let ownerFolderName = 'เจ้าของ_' + ownerNameClean;
+if(addrNoClean) ownerFolderName += '_บ้านเลขที่' + addrNoClean;
+if(roadClean) ownerFolderName += '_ถนน' + roadClean;
+
+const ownerFolder = getOrCreateFolder_(communityFolder,ownerFolderName);
+
+const ownerPhotoUrl = savePhotoSmart_(
+data.ownerPhotoBase64 || data.ownerPhoto || data.ownerImage,
+ownerFolder,'รูปเจ้าของ'
+);
+
+const petMainFolder = getOrCreateFolder_(ownerFolder,'สัตว์เลี้ยง');
+
+/************ LOOP PET ************/
+pets.forEach((pet,index)=>{
+
+let petPhotoUrl='';
+
+/* รองรับ BASE64 */
+const petPhotoData =
+pet.petPhotoBase64 ||
+pet.photoBase64 ||
+pet.image ||
+pet.photo ||
+
+/* ปกติ */
+pet["รูปภาพ"] ||
+pet["รูปสัตว์"] ||
+pet["รูปภาพสัตว์เลี้ยง"] ||
+
+/* กรณี อื่น ๆ โปรดระบุ */
+pet["รูปภาพสัตว์เลี้ยง (อื่นๆโปรดระบุ)"] ||
+pet["รูปภาพสัตว์เลี้ยง (อื่น ๆ โปรดระบุ)"] ||
+pet["รูปภาพอื่นๆ"] ||
+
+/* fallback จาก root */
+data["รูปภาพ"] ||
+data["รูปสัตว์"] ||
+data["รูปภาพสัตว์เลี้ยง"] ||
+data["รูปภาพสัตว์เลี้ยง (อื่นๆโปรดระบุ)"] ||
+data["รูปภาพสัตว์เลี้ยง (อื่น ๆ โปรดระบุ)"] ||
+data["รูปภาพอื่นๆ"] ||
+
+'';
+
+
+if(petPhotoData){
+
+  const typeName = cleanName_(pet.animalType || data.animalType || 'ไม่ระบุ');
+  const petName = cleanName_(pet.name || 'ไม่ระบุ');
+
+  petPhotoUrl = savePhotoSmart_(
+  petPhotoData,
+  petMainFolder,
+  'ตัวที่' + (index+1) + '_' + typeName + '_' + petName
+);
+}
+
+/* รองรับ URL */
+if(!petPhotoUrl && pet.imageUrl){
+  petPhotoUrl = saveImageFromUrl_(
+    pet.imageUrl,
+    petMainFolder,
+    'สัตว์_'+(index+1)
+  );
+}
+
+const rowObj = buildRowObject_(
+timestamp,year,centerName,communityName,
+data,pet,index,addr,
+ownerPhotoUrl,petPhotoUrl
+);
+
+appendSafe_(centerSheet,rowObj);
+appendSafe_(communitySheet,rowObj);
+
+});
+buildSummaryAndDashboard();
+return output_('success',true);
+
+}catch(err){
+Logger.log(err);
+return output_(err.message);
+}
+finally{
+lock.releaseLock();
+}
+}
+
+/******************** BUILD ROW ********************/
+function buildRowObject_(
+timestamp,year,centerName,communityName,
+data,pet,index,addr,
+ownerPhotoUrl,petPhotoUrl){
+
+function pick_(){
+  for(let i=0;i<arguments.length;i++){
+    const v=arguments[i];
+    if(v!==undefined && v!==null && v!=='')
+      return v.toString().trim();
+  }
+  return '';
+}
+
+/************ ประเภทสัตว์ ************/
+let rawType = pick_(pet.animalType,data.animalType);
+
+let otherType = pick_(
+  pet.otherAnimalType,
+  data.otherAnimalType,
+  pet["ชนิดสัตว์ (อื่น)"],
+  data["ชนิดสัตว์ (อื่น)"],
+  pet["อื่นๆโปรดระบุ"],
+  data["อื่นๆโปรดระบุ"]
+);
+
+let animalType='ไม่ระบุ';
+
+if(rawType){
+  const t=rawType.trim();
+  if(['สุนัข','หมา','dog'].includes(t)) animalType='สุนัข';
+  else if(['แมว','cat'].includes(t)) animalType='แมว';
+  else if(['เป็ด'].includes(t)) animalType='เป็ด';
+  else if(['ไก่'].includes(t)) animalType='ไก่';
+  else if(['สุกร','หมู'].includes(t)) animalType='สุกร';
+  else if(['นก'].includes(t)) animalType='นก';
+  else if(['แพะ'].includes(t)) animalType='แพะ';
+  else if(['ม้า'].includes(t)) animalType='ม้า';
+  else if(['อื่นๆ'].includes(t) && otherType)
+       animalType='อื่นๆ ('+otherType+')';
+  else animalType=t;
+}
+
+/************ ลักษณะการเลี้ยง ************/
+let raisingType = pick_(
+
+  pet["ลักษณะการเลี้ยง"],
+  data["ลักษณะการเลี้ยง"],
+
+  pet["วิธีการเลี้ยง"],
+  data["วิธีการเลี้ยง"],
+
+  pet.raisingStyle,
+  data.raisingStyle,
+
+  pet.raisingType,
+  data.raisingType,
+
+  pet.raising,
+  data.raising,
+
+  pet.raising_type,
+  data.raising_type
+
+) || 'ไม่ระบุ';
+
+
+/************ พื้นที่การเลี้ยง ************/
+let raisingArea = pick_(
+
+  pet["พื้นที่การเลี้ยง"],
+  data["พื้นที่การเลี้ยง"],
+
+  pet.raisingArea,
+  data.raisingArea,
+
+  pet.raising_area,
+  data.raising_area
+
+) || 'ไม่ระบุ';
+
+
+/************ สถานที่เลี้ยง ************/
+let raisingLocation = pick_(
+
+  pet["สถานที่เลี้ยง"],
+  data["สถานที่เลี้ยง"],
+
+  pet.raisingLocation,
+  data.raisingLocation
+
+) || 'ไม่ระบุ';
+
+
+/************ วัคซีน ************/
+let rabiesStatus = pick_(
+  pet.rabiesStatus,
+  pet.rabies,
+  data.rabiesStatus
+) || 'ไม่ระบุ';
+
+
+return {
+
+"timestamp":timestamp,
+"ปีงบประมาณ":year,
+"ศูนย์บริการ":centerName,
+"ชุมชน":communityName,
+
+"ประเภทสัตว์":animalType,
+"ชนิดสัตว์ (อื่น)":otherType||'',
+"จำนวนสัตว์ (อื่น)": (() => {
+  const val = pet.otherAnimalQty || data.otherAnimalQty;
+  const num = Number(val);
+  return num > 0 ? num : '';
+})(),
+
+"ลำดับสัตว์":pick_(pet.no,(index+1)),
+"ชื่อสัตว์":pick_(pet.name)||'ไม่ระบุ',
+"เพศ":pick_(pet.gender)||'ไม่ระบุ',
+"อายุ (ปี)":pick_(pet.ageYear),
+"อายุ (เดือน)":pick_(pet.ageMonth),
+"สี / ตำหนิ":pick_(pet.color),
+
+"สถานะทำหมัน":pick_(pet.sterilization)||'ไม่ระบุ',
+"วันที่ฉีดยาคุม":pick_(pet.contraceptiveDate),
+"สัตวแพทย์ผู้ฉีดยาคุม":pick_(pet.contraceptiveVet),
+
+"สถานะวัคซีนพิษสุนัขบ้า":rabiesStatus,
+"วันที่ฉีดวัคซีน":pick_(pet.rabiesDate),
+"สัตวแพทย์ผู้ฉีดวัคซีน":pick_(pet.rabiesVet),
+
+"ลักษณะการเลี้ยง":raisingType,
+"สถานที่เลี้ยง":raisingLocation,
+"พื้นที่การเลี้ยง":raisingArea,
+
+"ชื่อเจ้าของสัตว์":pick_(data.ownerName)||'ไม่ระบุ',
+"เลขบัตรประชาชน":pick_(data.citizenId),
+"เบอร์โทรศัพท์มือถือ":pick_(data.phone),
+"เบอร์โทรศัพท์บ้าน":pick_(data.homePhone),
+
+"บ้านเลขที่":pick_(addr.addrNo),
+"ถนน":pick_(addr.road),
+"ซอย":pick_(addr.soi),
+"ตำบล":pick_(addr.subdistrict),
+"อำเภอ":pick_(addr.district),
+"จังหวัด":pick_(addr.province),
+
+"ผู้บันทึก":pick_(data.recorderName),
+"ตำแหน่ง":pick_(data.recorderRole),
+
+"ลิงก์รูปเจ้าของ":ownerPhotoUrl||'',
+"ลิงก์รูปสัตว์":petPhotoUrl||''
+};
+}
+
+/******************** APPEND ********************/
+function appendSafe_(sheet,rowObj){
+autoAddMissingColumns_(sheet,rowObj);
+const headers = sheet.getRange(1,1,1,sheet.getLastColumn())
+.getValues()[0].map(h=>h.toString().trim());
+const row = headers.map(h=>rowObj[h]||'');
+if(row.join('').trim()!=='')
+sheet.appendRow(row);
+}
+
+function ensureHeaders_(sheet){
+if(sheet.getLastRow()===0)
+sheet.appendRow(MASTER_HEADERS);
+}
+
+function autoAddMissingColumns_(sheet,rowObj){
+let headers = sheet.getRange(1,1,1,sheet.getLastColumn())
+.getValues()[0].map(h=>h.toString().trim());
+Object.keys(rowObj).forEach(key=>{
+if(headers.indexOf(key)===-1){
+sheet.getRange(1,headers.length+1).setValue(key);
+headers.push(key);
+}
+});
+}
+
+/******************** HELPERS ********************/
+function safe_(v){
+return (v===null||v===undefined)?'':v.toString().trim();
+}
+
+function getOrCreateSheet_(ss,name){
+let s=ss.getSheetByName(name);
+if(!s)s=ss.insertSheet(name);
+return s;
+}
+
+function getOrCreateFolder_(parent,name){
+name=(name||'Unknown').toString().trim();
+if(!parent){
+const it=DriveApp.getFoldersByName(name);
+return it.hasNext()?it.next():DriveApp.createFolder(name);
+}
+const it=parent.getFoldersByName(name);
+return it.hasNext()?it.next():parent.createFolder(name);
+}
+
+function cleanName_(text){
+return (text||'').toString().trim()
+.replace(/\s+/g,'_')
+.replace(/[\\/:*?"<>|]/g,'');
+}
+
+
+function savePhotoSmart_(base64Data,folder,fileName){
+if(!base64Data||typeof base64Data!=='string')
+return '';
+
+try{
+
+let contentType = 'image/jpeg';
+
+/* ตัดช่องว่างหัวท้าย */
+base64Data = base64Data.trim();
+
+/* ถ้ามี header data:image/... */
+if(base64Data.indexOf('data:')===0){
+
+  const match = base64Data.match(/^data:(.*?);base64,/);
+  if(match && match[1]){
+    contentType = match[1];
+  }
+
+  base64Data = base64Data.split('base64,')[1];
+}
+
+/* ลบ newline และ space */
+base64Data = base64Data.replace(/\s/g,'');
+
+if(base64Data.length < 100){
+  Logger.log("BASE64 TOO SHORT");
+  return '';
+}
+
+const bytes = Utilities.base64Decode(base64Data);
+const blob = Utilities.newBlob(bytes, contentType, fileName);
+const file = folder.createFile(blob);
+
+file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+
+return file.getUrl();
+
+}catch(err){
+Logger.log("SAVE ERROR: "+err);
+return '';
+}
+}
+
+function saveImageFromUrl_(url,folder,fileName){
+try{
+const response = UrlFetchApp.fetch(url);
+const blob = response.getBlob();
+const file = folder.createFile(blob).setName(fileName+'.jpg');
+file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+return file.getUrl();
+}catch(e){
+Logger.log(e);
+return '';
+}
+}
+
+function output_(msg,ok){
+return ContentService.createTextOutput(
+JSON.stringify({status:ok?'success':'error',message:msg})
+).setMimeType(ContentService.MimeType.JSON);
+}
+
+function buildSummaryAndDashboard(){
+
+const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+const sheets = ss.getSheets();
+
+/************ รวมข้อมูล ************/
+let allData = [];
+let headers = [];
+
+sheets.forEach(s=>{
+
+  const name = s.getName();
+
+  if(name === 'SUMMARY_AUTO' || name === 'DASHBOARD_AUTO') return;
+
+  const values = s.getDataRange().getValues();
+  if(values.length < 2) return;
+
+  const headerRow = values[0].map(h => String(h).trim());
+
+  const comIdx = headerRow.indexOf("ชุมชน");
+  if(comIdx === -1) return;
+
+  // 🔥 เช็คว่า sheet นี้ = ชื่อชุมชนจริง
+  let sampleCommunity = '';
+
+for(let i=1;i<values.length;i++){
+  if(values[i][comIdx]){
+    sampleCommunity = values[i][comIdx];
+    break;
+  }
+}
+
+if(!sampleCommunity) return;
+
+
+  if(name !== sampleCommunity) return; // 💥 ตัวตัดสินจริง
+
+  if(headers.length === 0){
+    headers = headerRow;
+  }
+
+  values.slice(1).forEach(r=>{
+    allData.push(r);
+  });
+
+});
+
+if(allData.length === 0){
+  Logger.log("ไม่มีข้อมูล");
+  return;
+}
+
+/************ map index ************/
+const idx = {};
+headers.forEach((h,i)=>{
+  idx[String(h).trim()] = i;
+});
+
+/************ helper sort ************/
+function sortObj(obj){
+  return Object.fromEntries(
+    Object.entries(obj).sort((a,b)=>b[1]-a[1])
+  );
+}
+
+/************ ตัวเก็บค่า ************/
+let animalGender = {};
+let steril = {};
+let vaccine = {};
+let center = {};
+let community = {};
+let recorder = {};
+let byCenter = {};
+let byCommunity = {};
+let centerCommunityAnimal = {};
+
+/************ loop ************/
+allData.forEach(r=>{
+
+  const typeIndex = idx["ประเภทสัตว์"];
+
+let rawType = '';
+
+if (typeIndex !== undefined && r[typeIndex] !== undefined) {
+  rawType = r[typeIndex];
+}
+
+if (!rawType) rawType = 'ไม่ระบุ';
+
+// 👉 สร้าง type ก่อนใช้
+let type = String(rawType).trim();
+
+// 👉 แยก qty
+let qty = 1;
+
+if (type.startsWith('อื่น')) {
+  const otherIdx = idx["จำนวนสัตว์ (อื่น)"];
+  let raw = 0;
+
+  if (otherIdx !== undefined && r[otherIdx] !== undefined) {
+    raw = Number(r[otherIdx]);
+  }
+
+  qty = raw > 0 ? raw : 1;
+}
+
+// 👉 normalize
+if (type.startsWith('อื่น')) {
+  type = 'อื่นๆ';
+}
+
+  // 👇 ของเดิมใช้ต่อได้เลย
+  const gender = r[idx["เพศ"]] || 'ไม่ระบุ';
+  const ster = r[idx["สถานะทำหมัน"]] || 'ไม่ระบุ';
+  const vac = r[idx["สถานะวัคซีนพิษสุนัขบ้า"]] || 'ไม่ระบุ';
+  const cen = r[idx["ศูนย์บริการ"]] || 'ไม่ระบุ';
+  const com = r[idx["ชุมชน"]] || 'ไม่ระบุ';
+  const rec = r[idx["ผู้บันทึก"]] || 'ไม่ระบุ';
+
+  if(!animalGender[type]) animalGender[type] = {ผู้:0,เมีย:0,อื่นๆ:0};
+
+  if(gender === 'ผู้') animalGender[type]['ผู้'] += qty;
+  else if(gender === 'เมีย') animalGender[type]['เมีย'] += qty;
+  else animalGender[type]['อื่นๆ'] += qty;
+
+  steril[ster] = (steril[ster]||0)+qty;
+  vaccine[vac] = (vaccine[vac]||0)+qty;
+  center[cen] = (center[cen]||0)+qty;
+  community[com] = (community[com]||0)+qty;
+  recorder[rec] = (recorder[rec]||0)+qty;
+/* ===== แยกตามศูนย์ ===== */
+const key = cen + "|" + com + "|" + type;
+centerCommunityAnimal[key] = (centerCommunityAnimal[key]||0)+qty;
+if(!byCenter[cen]){
+  byCenter[cen] = {
+    animalGender:{},
+    steril:{},
+    vaccine:{},
+    recorder:{}
+    /* ===== ศูนย์ + ชุมชน + ประเภทสัตว์ ===== */
+  };
+}
+
+if(!byCenter[cen].animalGender[type]){
+  byCenter[cen].animalGender[type] = {ผู้:0,เมีย:0,อื่นๆ:0};
+}
+
+if(gender === 'ผู้') byCenter[cen].animalGender[type]['ผู้'] += qty;
+else if(gender === 'เมีย') byCenter[cen].animalGender[type]['เมีย'] += qty;
+else byCenter[cen].animalGender[type]['อื่นๆ'] += qty;
+
+byCenter[cen].steril[ster] = (byCenter[cen].steril[ster]||0)+qty;
+byCenter[cen].vaccine[vac] = (byCenter[cen].vaccine[vac]||0)+qty;
+byCenter[cen].recorder[rec] = (byCenter[cen].recorder[rec]||0)+qty;
+
+
+/* ===== แยกตามชุมชน ===== */
+if(!byCommunity[com]){
+  byCommunity[com] = {
+    animalGender:{},
+    steril:{},
+    vaccine:{},
+    recorder:{}
+  };
+}
+
+if(!byCommunity[com].animalGender[type]){
+  byCommunity[com].animalGender[type] = {ผู้:0,เมีย:0,อื่นๆ:0};
+}
+
+if(gender === 'ผู้') byCommunity[com].animalGender[type]['ผู้'] += qty;
+else if(gender === 'เมีย') byCommunity[com].animalGender[type]['เมีย'] += qty;
+else byCommunity[com].animalGender[type]['อื่นๆ'] += qty;
+
+byCommunity[com].steril[ster] = (byCommunity[com].steril[ster]||0)+qty;
+byCommunity[com].vaccine[vac] = (byCommunity[com].vaccine[vac]||0)+qty;
+byCommunity[com].recorder[rec] = (byCommunity[com].recorder[rec]||0)+qty;
+
+});
+
+/************ sort ************/
+steril = sortObj(steril);
+vaccine = sortObj(vaccine);
+center = sortObj(center);
+community = sortObj(community);
+recorder = sortObj(recorder);
+
+/************ SUMMARY ************/
+let sumSheet = ss.getSheetByName('SUMMARY_AUTO');
+if(!sumSheet){
+  sumSheet = ss.insertSheet('SUMMARY_AUTO');
+}else{
+  sumSheet.clear();
+}
+
+/************ ประเภท+เพศ ************/
+sumSheet.getRange(1,1,1,4)
+.setValues([["ประเภทสัตว์","ผู้","เมีย","อื่นๆ"]]);
+
+let r = 2;
+Object.keys(animalGender).forEach(type=>{
+  const g = animalGender[type];
+  sumSheet.getRange(r,1,1,4)
+  .setValues([[type,g['ผู้'],g['เมีย'],g['อื่นๆ']]]);
+  r++;
+});
+
+let sectionStart = r + 2;
+
+/************ helper ************/
+function writeTable(title,obj,startRow){
+
+  sumSheet.getRange(startRow,1).setValue(title);
+  sumSheet.getRange(startRow+1,1,1,2)
+  .setValues([["รายการ","จำนวน"]]);
+
+  let r = startRow+2;
+
+  Object.entries(obj).forEach(([k,v])=>{
+    sumSheet.getRange(r,1,1,2).setValues([[k,v]]);
+    r++;
+  });
+
+  return {start:startRow+1,end:r-1,next:r+2};
+}
+
+const t1 = writeTable("สถานะทำหมัน",steril,sectionStart);
+const t2 = writeTable("วัคซีนพิษสุนัขบ้า",vaccine,t1.next);
+const t3 = writeTable("ศูนย์บริการ",center,t2.next);
+const t4 = writeTable("ชุมชน",community,t3.next);
+const t5 = writeTable("ผู้บันทึก",recorder,t4.next);
+let nextRow = t5.next;
+/************ ศูนย์ + ชุมชน + ประเภทสัตว์ ************/
+sumSheet.getRange(nextRow,1).setValue("ศูนย์ + ชุมชน + ประเภทสัตว์");
+sumSheet.getRange(nextRow+1,1,1,4)
+.setValues([["ศูนย์","ชุมชน","ประเภทสัตว์","จำนวน"]]);
+
+let rcc = nextRow + 2;
+
+Object.entries(centerCommunityAnimal).forEach(([k,v])=>{
+  const [c,cm,t] = k.split("|");
+  sumSheet.getRange(rcc,1,1,4).setValues([[c,cm,t,v]]);
+  rcc++;
+});
+
+let centerComStart = nextRow+1;
+let centerComEnd = rcc-1;
+
+nextRow = rcc + 3;
+
+/************ แยกตามศูนย์ ************/
+Object.keys(byCenter).forEach(cen=>{
+
+  sumSheet.getRange(nextRow,1).setValue("ศูนย์: "+cen);
+  nextRow++;
+
+  Object.entries(byCenter[cen].steril).forEach(([k,v])=>{
+    sumSheet.getRange(nextRow,1,1,2).setValues([[k,v]]);
+    nextRow++;
+  });
+
+  nextRow+=2;
+});
+
+/************ แยกตามชุมชน ************/
+Object.keys(byCommunity).forEach(com=>{
+
+  sumSheet.getRange(nextRow,1).setValue("ชุมชน: "+com);
+  nextRow++;
+
+  Object.entries(byCommunity[com].steril).forEach(([k,v])=>{
+    sumSheet.getRange(nextRow,1,1,2).setValues([[k,v]]);
+    nextRow++;
+  });
+
+  nextRow+=2;
+});
+
+}
