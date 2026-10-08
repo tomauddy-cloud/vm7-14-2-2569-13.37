@@ -730,26 +730,27 @@ function openForm(center) {
 
 function backToCenter() {
 
-    if (
-        !confirm(
-            'ต้องการกลับไปเลือกศูนย์หรือไม่? ข้อมูลที่ยังไม่ได้บันทึกจะหาย'
-        )
-    ) {
-        return;
-    }
+    const centerPage =
+        document.getElementById('centerPage');
 
-    const centerPage = document.getElementById('centerPage');
-    const formPage = document.getElementById('formPage');
+    const formPage =
+        document.getElementById('formPage');
 
+    // ซ่อนหน้าแบบสำรวจ
     formPage.classList.remove('page-visible');
     formPage.classList.add('page-hidden');
 
+    // แสดงหน้าเลือกศูนย์
     centerPage.classList.remove('page-hidden');
     centerPage.classList.add('page-visible');
 
-    window.scrollTo(0, 0);
+    // กลับขึ้นด้านบนทันที
+    window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'auto'
+    });
 }
-
 
 /* =====================================================
    โหลดชุมชน
