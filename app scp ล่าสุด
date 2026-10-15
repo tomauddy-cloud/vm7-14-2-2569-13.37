@@ -1,724 +1,997 @@
 /******************** CONFIG ********************/
 const SPREADSHEET_ID = '1yF2jIPcKXgGLDQFcsDABY-zQeoj87XquGaENwTgN8xQ';
 const ROOT_FOLDER_NAME = 'AnimalSurvey_OwnerPhotos';
+const TIME_ZONE = 'Asia/Bangkok';
 
 /******************** MASTER HEADER ********************/
 const MASTER_HEADERS = [
-"timestamp","ปีงบประมาณ","ศูนย์บริการ","ชุมชน",
-"ประเภทสัตว์","ชนิดสัตว์ (อื่น)","จำนวนสัตว์ (อื่น)",
-"ลำดับสัตว์","ชื่อสัตว์","เพศ","อายุ (ปี)","อายุ (เดือน)",
-"สี / ตำหนิ","สถานะทำหมัน","วันที่ฉีดยาคุม","สัตวแพทย์ผู้ฉีดยาคุม",
-"สถานะวัคซีนพิษสุนัขบ้า","วันที่ฉีดวัคซีน","สัตวแพทย์ผู้ฉีดวัคซีน",
-"ลักษณะการเลี้ยง","สถานที่เลี้ยง","พื้นที่การเลี้ยง",
-"ชื่อเจ้าของสัตว์","เลขบัตรประชาชน","เบอร์โทรศัพท์มือถือ",
-"เบอร์โทรศัพท์บ้าน","บ้านเลขที่","ถนน","ซอย",
-"ตำบล","อำเภอ","จังหวัด",
-"ผู้บันทึก","ตำแหน่ง",
-"ลิงก์รูปเจ้าของ","ลิงก์รูปสัตว์"
+  "timestamp","ปีงบประมาณ","ศูนย์บริการ","ชุมชน",
+  "ประเภทสัตว์","ชนิดสัตว์ (อื่น)","จำนวนสัตว์ (อื่น)",
+  "ลำดับสัตว์","ชื่อสัตว์","เพศ","อายุ (ปี)","อายุ (เดือน)",
+  "สี / ตำหนิ","สถานะทำหมัน","วันที่ฉีดยาคุม","สัตวแพทย์ผู้ฉีดยาคุม",
+  "สถานะวัคซีนพิษสุนัขบ้า","วันที่ฉีดวัคซีน","สัตวแพทย์ผู้ฉีดวัคซีน",
+  "ลักษณะการเลี้ยง","สถานที่เลี้ยง","พื้นที่การเลี้ยง",
+  "ชื่อเจ้าของสัตว์","เลขบัตรประชาชน","เบอร์โทรศัพท์มือถือ",
+  "เบอร์โทรศัพท์บ้าน","บ้านเลขที่","ถนน","ซอย",
+  "ตำบล","อำเภอ","จังหวัด",
+  "ผู้บันทึก","ตำแหน่ง",
+  "ลิงก์รูปเจ้าของ","ลิงก์รูปสัตว์"
 ];
 
 /******************** MAIN ********************/
-function doPost(e){
+function doPost(e) {
+  const lock = LockService.getScriptLock();
 
-const lock = LockService.getScriptLock();
-if(!lock.tryLock(10000))
-  return output_('ระบบกำลังประมวลผล กรุณาลองใหม่');
+  if (!lock.tryLock(10000)) {
+    return output_('ระบบกำลังประมวลผล กรุณาลองใหม่');
+  }
 
-try{
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return output_('No POST data');
+    }
 
-if(!e || !e.postData || !e.postData.contents)
-  return output_('No POST data');
+    let data = {};
 
-let data={};
-try{
-  data = JSON.parse(e.postData.contents);
-}catch(err){
-  return output_('JSON ไม่ถูกต้อง');
-}
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (err) {
+      return output_('JSON ไม่ถูกต้อง');
+    }
 
-const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-const timestamp = new Date();
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const timestamp = new Date();
 
-const year = safe_(data.year) || '2569';
-const centerName = safe_(data.centerName || data.center);
-const communityName = safe_(data.communityName || data.community);
+    const year = safe_(data.year) || '2569';
+    const centerName = safe_(data.centerName || data.center);
+    const communityName = safe_(data.communityName || data.community);
 
-if(!centerName || !communityName)
-  return output_('กรุณาระบุชื่อศูนย์บริการและชุมชน');
+    if (!centerName || !communityName) {
+      return output_('กรุณาระบุชื่อศูนย์บริการและชุมชน');
+    }
 
-const addr = data.address || {};
+    const addr = data.address || {};
 
-/************ PET STRUCTURE ************/
-let pets = [];
+    /************ PET STRUCTURE ************/
+    let pets = [];
 
-if(Array.isArray(data.pets) && data.pets.length>0){
-  pets = data.pets;
-}
-else if(data.pet){
-  pets = [data.pet];
-}
-else{
-  pets = [data];
-}
+    if (Array.isArray(data.pets) && data.pets.length > 0) {
+      pets = data.pets;
+    } else if (data.pet) {
+      pets = [data.pet];
+    } else {
+      pets = [data];
+    }
 
-/************ SHEETS ************/
-const centerSheet = getOrCreateSheet_(ss, centerName);
-const communitySheet = getOrCreateSheet_(ss, communityName);
+    /************ SHEETS ************/
+    const centerSheet = getOrCreateSheet_(ss, centerName);
+    const communitySheet = getOrCreateSheet_(ss, communityName);
 
-ensureHeaders_(centerSheet);
-ensureHeaders_(communitySheet);
+    ensureHeaders_(centerSheet);
+    ensureHeaders_(communitySheet);
 
-/************ DRIVE ************/
-const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
-const yearFolder = getOrCreateFolder_(rootFolder, year);
-const centerFolder = getOrCreateFolder_(yearFolder, cleanName_(centerName));
-const communityFolder = getOrCreateFolder_(centerFolder, cleanName_(communityName));
+    // ตั้งคอลัมน์บ้านเลขที่เป็นข้อความก่อนบันทึก
+    setHouseNumberColumnText_(centerSheet);
+    setHouseNumberColumnText_(communitySheet);
 
-/************ OWNER FOLDER FORMAT ************/
-const ownerNameClean = cleanName_(safe_(data.ownerName)||'ไม่ระบุ');
-const addrNoClean = cleanName_(addr.addrNo || '');
-const roadClean = cleanName_(addr.road || '');
+    /************ DRIVE ************/
+    const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
+    const yearFolder = getOrCreateFolder_(rootFolder, year);
+    const centerFolder = getOrCreateFolder_(
+      yearFolder, cleanName_(centerName)
+    );
+    const communityFolder = getOrCreateFolder_(
+      centerFolder, cleanName_(communityName)
+    );
 
-let ownerFolderName = 'เจ้าของ_' + ownerNameClean;
-if(addrNoClean) ownerFolderName += '_บ้านเลขที่' + addrNoClean;
-if(roadClean) ownerFolderName += '_ถนน' + roadClean;
+    /************ OWNER FOLDER ************/
+    const ownerNameClean = cleanName_(
+      safe_(data.ownerName) || 'ไม่ระบุ'
+    );
 
-const ownerFolder = getOrCreateFolder_(communityFolder,ownerFolderName);
+    const addrNoClean = cleanName_(
+      formatHouseNo_(addr.addrNo)
+    );
 
-const ownerPhotoUrl = savePhotoSmart_(
-data.ownerPhotoBase64 || data.ownerPhoto || data.ownerImage,
-ownerFolder,'รูปเจ้าของ'
-);
+    const roadClean = cleanName_(addr.road || '');
 
-const petMainFolder = getOrCreateFolder_(ownerFolder,'สัตว์เลี้ยง');
+    let ownerFolderName = 'เจ้าของ_' + ownerNameClean;
 
-/************ LOOP PET ************/
-pets.forEach((pet,index)=>{
+    if (addrNoClean) {
+      ownerFolderName += '_บ้านเลขที่' + addrNoClean;
+    }
 
-let petPhotoUrl='';
+    if (roadClean) {
+      ownerFolderName += '_ถนน' + roadClean;
+    }
 
-/* รองรับ BASE64 */
-const petPhotoData =
-pet.petPhotoBase64 ||
-pet.photoBase64 ||
-pet.image ||
-pet.photo ||
+    const ownerFolder = getOrCreateFolder_(
+      communityFolder, ownerFolderName
+    );
 
-/* ปกติ */
-pet["รูปภาพ"] ||
-pet["รูปสัตว์"] ||
-pet["รูปภาพสัตว์เลี้ยง"] ||
+    const ownerPhotoUrl = savePhotoSmart_(
+      data.ownerPhotoBase64 || data.ownerPhoto || data.ownerImage,
+      ownerFolder,
+      'รูปเจ้าของ'
+    );
 
-/* กรณี อื่น ๆ โปรดระบุ */
-pet["รูปภาพสัตว์เลี้ยง (อื่นๆโปรดระบุ)"] ||
-pet["รูปภาพสัตว์เลี้ยง (อื่น ๆ โปรดระบุ)"] ||
-pet["รูปภาพอื่นๆ"] ||
+    const petMainFolder = getOrCreateFolder_(
+      ownerFolder, 'สัตว์เลี้ยง'
+    );
 
-/* fallback จาก root */
-data["รูปภาพ"] ||
-data["รูปสัตว์"] ||
-data["รูปภาพสัตว์เลี้ยง"] ||
-data["รูปภาพสัตว์เลี้ยง (อื่นๆโปรดระบุ)"] ||
-data["รูปภาพสัตว์เลี้ยง (อื่น ๆ โปรดระบุ)"] ||
-data["รูปภาพอื่นๆ"] ||
+    /************ LOOP PET ************/
+    pets.forEach((pet, index) => {
+      let petPhotoUrl = '';
 
-'';
+      const petPhotoData =
+        pet.petPhotoBase64 ||
+        pet.photoBase64 ||
+        pet.image ||
+        pet.photo ||
+        pet["รูปภาพ"] ||
+        pet["รูปสัตว์"] ||
+        pet["รูปภาพสัตว์เลี้ยง"] ||
+        pet["รูปภาพสัตว์เลี้ยง (อื่นๆโปรดระบุ)"] ||
+        pet["รูปภาพสัตว์เลี้ยง (อื่น ๆ โปรดระบุ)"] ||
+        pet["รูปภาพอื่นๆ"] ||
+        data["รูปภาพ"] ||
+        data["รูปสัตว์"] ||
+        data["รูปภาพสัตว์เลี้ยง"] ||
+        data["รูปภาพสัตว์เลี้ยง (อื่นๆโปรดระบุ)"] ||
+        data["รูปภาพสัตว์เลี้ยง (อื่น ๆ โปรดระบุ)"] ||
+        data["รูปภาพอื่นๆ"] ||
+        '';
 
+      if (petPhotoData) {
+        const typeName = cleanName_(
+          pet.animalType || data.animalType || 'ไม่ระบุ'
+        );
 
-if(petPhotoData){
+        const petName = cleanName_(pet.name || 'ไม่ระบุ');
 
-  const typeName = cleanName_(pet.animalType || data.animalType || 'ไม่ระบุ');
-  const petName = cleanName_(pet.name || 'ไม่ระบุ');
+        petPhotoUrl = savePhotoSmart_(
+          petPhotoData,
+          petMainFolder,
+          'ตัวที่' + (index + 1) + '_' + typeName + '_' + petName
+        );
+      }
 
-  petPhotoUrl = savePhotoSmart_(
-  petPhotoData,
-  petMainFolder,
-  'ตัวที่' + (index+1) + '_' + typeName + '_' + petName
-);
-}
+      if (!petPhotoUrl && pet.imageUrl) {
+        petPhotoUrl = saveImageFromUrl_(
+          pet.imageUrl,
+          petMainFolder,
+          'สัตว์_' + (index + 1)
+        );
+      }
 
-/* รองรับ URL */
-if(!petPhotoUrl && pet.imageUrl){
-  petPhotoUrl = saveImageFromUrl_(
-    pet.imageUrl,
-    petMainFolder,
-    'สัตว์_'+(index+1)
-  );
-}
+      const rowObj = buildRowObject_(
+        timestamp, year, centerName, communityName,
+        data, pet, index, addr, ownerPhotoUrl, petPhotoUrl
+      );
 
-const rowObj = buildRowObject_(
-timestamp,year,centerName,communityName,
-data,pet,index,addr,
-ownerPhotoUrl,petPhotoUrl
-);
+      appendSafe_(centerSheet, rowObj);
+      appendSafe_(communitySheet, rowObj);
+    });
 
-appendSafe_(centerSheet,rowObj);
-appendSafe_(communitySheet,rowObj);
+    buildSummaryAndDashboard();
 
-});
-buildSummaryAndDashboard();
-return output_('success',true);
+    return output_('success', true);
 
-}catch(err){
-Logger.log(err);
-return output_(err.message);
-}
-finally{
-lock.releaseLock();
-}
+  } catch (err) {
+    Logger.log(err.stack || err);
+    return output_(err.message || String(err));
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /******************** BUILD ROW ********************/
 function buildRowObject_(
-timestamp,year,centerName,communityName,
-data,pet,index,addr,
-ownerPhotoUrl,petPhotoUrl){
+  timestamp, year, centerName, communityName,
+  data, pet, index, addr, ownerPhotoUrl, petPhotoUrl
+) {
+  function pick_() {
+    for (let i = 0; i < arguments.length; i++) {
+      const v = arguments[i];
 
-function pick_(){
-  for(let i=0;i<arguments.length;i++){
-    const v=arguments[i];
-    if(v!==undefined && v!==null && v!=='')
-      return v.toString().trim();
+      if (v !== undefined && v !== null && v !== '') {
+        return String(v).trim();
+      }
+    }
+
+    return '';
   }
-  return '';
+
+  /************ ประเภทสัตว์ ************/
+  const rawType = pick_(pet.animalType, data.animalType);
+
+  const otherType = pick_(
+    pet.otherAnimalType,
+    data.otherAnimalType,
+    pet["ชนิดสัตว์ (อื่น)"],
+    data["ชนิดสัตว์ (อื่น)"],
+    pet["อื่นๆโปรดระบุ"],
+    data["อื่นๆโปรดระบุ"]
+  );
+
+  let animalType = 'ไม่ระบุ';
+
+  if (rawType) {
+    const t = rawType.trim();
+    const low = t.toLowerCase();
+
+    if (['สุนัข', 'หมา', 'dog'].includes(low)) {
+      animalType = 'สุนัข';
+    } else if (['แมว', 'cat'].includes(low)) {
+      animalType = 'แมว';
+    } else if (['โค', 'วัว', 'cow'].includes(low)) {
+      animalType = 'โค';
+    } else if (t === 'เป็ด') {
+      animalType = 'เป็ด';
+    } else if (t === 'ไก่') {
+      animalType = 'ไก่';
+    } else if (['สุกร', 'หมู'].includes(t)) {
+      animalType = 'สุกร';
+    } else if (t === 'นก') {
+      animalType = 'นก';
+    } else if (t === 'แพะ') {
+      animalType = 'แพะ';
+    } else if (t === 'ม้า') {
+      animalType = 'ม้า';
+    } else if (t.startsWith('อื่น') && otherType) {
+      animalType = 'อื่นๆ (' + otherType + ')';
+    } else {
+      animalType = t;
+    }
+  }
+
+  /************ ลักษณะการเลี้ยง ************/
+  const raisingType = pick_(
+    pet["ลักษณะการเลี้ยง"], data["ลักษณะการเลี้ยง"],
+    pet["วิธีการเลี้ยง"], data["วิธีการเลี้ยง"],
+    pet.raisingStyle, data.raisingStyle,
+    pet.raisingType, data.raisingType,
+    pet.raising, data.raising,
+    pet.raising_type, data.raising_type
+  ) || 'ไม่ระบุ';
+
+  /************ พื้นที่การเลี้ยง ************/
+  const raisingArea = pick_(
+    pet["พื้นที่การเลี้ยง"], data["พื้นที่การเลี้ยง"],
+    pet.raisingArea, data.raisingArea,
+    pet.raising_area, data.raising_area
+  ) || 'ไม่ระบุ';
+
+  /************ สถานที่เลี้ยง ************/
+  const raisingLocation = pick_(
+    pet["สถานที่เลี้ยง"], data["สถานที่เลี้ยง"],
+    pet.raisingLocation, data.raisingLocation
+  ) || 'ไม่ระบุ';
+
+  /************ วัคซีน ************/
+  const rabiesStatus = pick_(
+    pet.rabiesStatus, pet.rabies, data.rabiesStatus
+  ) || 'ไม่ระบุ';
+
+  return {
+    "timestamp": timestamp,
+    "ปีงบประมาณ": year,
+    "ศูนย์บริการ": centerName,
+    "ชุมชน": communityName,
+
+    "ประเภทสัตว์": animalType,
+    "ชนิดสัตว์ (อื่น)": otherType || '',
+
+    "จำนวนสัตว์ (อื่น)": (() => {
+      const val = pet.otherAnimalQty || data.otherAnimalQty;
+      const num = Number(val);
+      return num > 0 ? num : '';
+    })(),
+
+    "ลำดับสัตว์": pick_(pet.no, index + 1),
+    "ชื่อสัตว์": pick_(pet.name) || 'ไม่ระบุ',
+    "เพศ": pick_(pet.gender) || 'ไม่ระบุ',
+    "อายุ (ปี)": pick_(pet.ageYear),
+    "อายุ (เดือน)": pick_(pet.ageMonth),
+    "สี / ตำหนิ": pick_(pet.color),
+
+    "สถานะทำหมัน": pick_(pet.sterilization) || 'ไม่ระบุ',
+    "วันที่ฉีดยาคุม": pick_(pet.contraceptiveDate),
+    "สัตวแพทย์ผู้ฉีดยาคุม": pick_(pet.contraceptiveVet),
+
+    "สถานะวัคซีนพิษสุนัขบ้า": rabiesStatus,
+    "วันที่ฉีดวัคซีน": pick_(pet.rabiesDate),
+    "สัตวแพทย์ผู้ฉีดวัคซีน": pick_(pet.rabiesVet),
+
+    "ลักษณะการเลี้ยง": raisingType,
+    "สถานที่เลี้ยง": raisingLocation,
+    "พื้นที่การเลี้ยง": raisingArea,
+
+    "ชื่อเจ้าของสัตว์": pick_(data.ownerName) || 'ไม่ระบุ',
+    "เลขบัตรประชาชน": pick_(data.citizenId),
+    "เบอร์โทรศัพท์มือถือ": pick_(data.phone),
+    "เบอร์โทรศัพท์บ้าน": pick_(data.homePhone),
+
+    // บ้านเลขที่บันทึกเป็นข้อความเสมอ
+    "บ้านเลขที่": formatHouseNo_(addr.addrNo),
+
+    "ถนน": pick_(addr.road),
+    "ซอย": pick_(addr.soi),
+    "ตำบล": pick_(addr.subdistrict),
+    "อำเภอ": pick_(addr.district),
+    "จังหวัด": pick_(addr.province),
+
+    "ผู้บันทึก": pick_(data.recorderName),
+    "ตำแหน่ง": pick_(data.recorderRole),
+
+    "ลิงก์รูปเจ้าของ": ownerPhotoUrl || '',
+    "ลิงก์รูปสัตว์": petPhotoUrl || ''
+  };
 }
 
-/************ ประเภทสัตว์ ************/
-let rawType = pick_(pet.animalType,data.animalType);
+/******************** HOUSE NUMBER FIX ********************/
+/*
+ * ป้องกัน Date object ถูกแปลงเป็นข้อความ GMT+0700
+ *
+ * หมายเหตุ:
+ * หากข้อมูลเดิมถูกแปลงเป็นวันที่แล้ว จะไม่สามารถทราบ
+ * บ้านเลขที่เดิมได้อย่างแน่นอนจากค่า Date เพียงอย่างเดียว
+ */
+function formatHouseNo_(value) {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
 
-let otherType = pick_(
-  pet.otherAnimalType,
-  data.otherAnimalType,
-  pet["ชนิดสัตว์ (อื่น)"],
-  data["ชนิดสัตว์ (อื่น)"],
-  pet["อื่นๆโปรดระบุ"],
-  data["อื่นๆโปรดระบุ"]
-);
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return '';
 
-let animalType='ไม่ระบุ';
+    // บ้านเลขที่ลักษณะ 23/3 มักถูกชีตแปลงเป็นวันที่ 23/3/2026
+    // จึงคืนค่าเฉพาะวัน/เดือน เพื่อไม่ให้ปีถูกเติมเข้ามาเป็นส่วนหนึ่งของบ้านเลขที่
+    // หมายเหตุ: หากเป็นวันที่จริงที่ตั้งใจกรอก จะไม่สามารถแยกจากบ้านเลขที่ได้แน่นอน
+    return Utilities.formatDate(
+      value,
+      TIME_ZONE,
+      'd/M'
+    );
+  }
 
-if(rawType){
-  const t=rawType.trim();
-  if(['สุนัข','หมา','dog'].includes(t)) animalType='สุนัข';
-  else if(['แมว','cat'].includes(t)) animalType='แมว';
-  else if(['เป็ด'].includes(t)) animalType='เป็ด';
-  else if(['ไก่'].includes(t)) animalType='ไก่';
-  else if(['สุกร','หมู'].includes(t)) animalType='สุกร';
-  else if(['นก'].includes(t)) animalType='นก';
-  else if(['แพะ'].includes(t)) animalType='แพะ';
-  else if(['ม้า'].includes(t)) animalType='ม้า';
-  else if(['อื่นๆ'].includes(t) && otherType)
-       animalType='อื่นๆ ('+otherType+')';
-  else animalType=t;
+  return String(value).trim();
 }
 
-/************ ลักษณะการเลี้ยง ************/
-let raisingType = pick_(
+/*
+ * ตั้งคอลัมน์บ้านเลขที่เป็น Plain text
+ * เพื่อป้องกัน Google Sheets ตีความเป็นวันที่
+ */
+function setHouseNumberColumnText_(sheet) {
+  const lastColumn = sheet.getLastColumn();
 
-  pet["ลักษณะการเลี้ยง"],
-  data["ลักษณะการเลี้ยง"],
+  if (lastColumn < 1) return;
 
-  pet["วิธีการเลี้ยง"],
-  data["วิธีการเลี้ยง"],
+  const headers = sheet.getRange(
+    1, 1, 1, lastColumn
+  ).getDisplayValues()[0].map(h => String(h).trim());
 
-  pet.raisingStyle,
-  data.raisingStyle,
+  const houseIndex = headers.indexOf('บ้านเลขที่');
 
-  pet.raisingType,
-  data.raisingType,
+  if (houseIndex === -1) return;
 
-  pet.raising,
-  data.raising,
+  const column = houseIndex + 1;
 
-  pet.raising_type,
-  data.raising_type
-
-) || 'ไม่ระบุ';
-
-
-/************ พื้นที่การเลี้ยง ************/
-let raisingArea = pick_(
-
-  pet["พื้นที่การเลี้ยง"],
-  data["พื้นที่การเลี้ยง"],
-
-  pet.raisingArea,
-  data.raisingArea,
-
-  pet.raising_area,
-  data.raising_area
-
-) || 'ไม่ระบุ';
-
-
-/************ สถานที่เลี้ยง ************/
-let raisingLocation = pick_(
-
-  pet["สถานที่เลี้ยง"],
-  data["สถานที่เลี้ยง"],
-
-  pet.raisingLocation,
-  data.raisingLocation
-
-) || 'ไม่ระบุ';
-
-
-/************ วัคซีน ************/
-let rabiesStatus = pick_(
-  pet.rabiesStatus,
-  pet.rabies,
-  data.rabiesStatus
-) || 'ไม่ระบุ';
-
-
-return {
-
-"timestamp":timestamp,
-"ปีงบประมาณ":year,
-"ศูนย์บริการ":centerName,
-"ชุมชน":communityName,
-
-"ประเภทสัตว์":animalType,
-"ชนิดสัตว์ (อื่น)":otherType||'',
-"จำนวนสัตว์ (อื่น)": (() => {
-  const val = pet.otherAnimalQty || data.otherAnimalQty;
-  const num = Number(val);
-  return num > 0 ? num : '';
-})(),
-
-"ลำดับสัตว์":pick_(pet.no,(index+1)),
-"ชื่อสัตว์":pick_(pet.name)||'ไม่ระบุ',
-"เพศ":pick_(pet.gender)||'ไม่ระบุ',
-"อายุ (ปี)":pick_(pet.ageYear),
-"อายุ (เดือน)":pick_(pet.ageMonth),
-"สี / ตำหนิ":pick_(pet.color),
-
-"สถานะทำหมัน":pick_(pet.sterilization)||'ไม่ระบุ',
-"วันที่ฉีดยาคุม":pick_(pet.contraceptiveDate),
-"สัตวแพทย์ผู้ฉีดยาคุม":pick_(pet.contraceptiveVet),
-
-"สถานะวัคซีนพิษสุนัขบ้า":rabiesStatus,
-"วันที่ฉีดวัคซีน":pick_(pet.rabiesDate),
-"สัตวแพทย์ผู้ฉีดวัคซีน":pick_(pet.rabiesVet),
-
-"ลักษณะการเลี้ยง":raisingType,
-"สถานที่เลี้ยง":raisingLocation,
-"พื้นที่การเลี้ยง":raisingArea,
-
-"ชื่อเจ้าของสัตว์":pick_(data.ownerName)||'ไม่ระบุ',
-"เลขบัตรประชาชน":pick_(data.citizenId),
-"เบอร์โทรศัพท์มือถือ":pick_(data.phone),
-"เบอร์โทรศัพท์บ้าน":pick_(data.homePhone),
-
-"บ้านเลขที่":pick_(addr.addrNo),
-"ถนน":pick_(addr.road),
-"ซอย":pick_(addr.soi),
-"ตำบล":pick_(addr.subdistrict),
-"อำเภอ":pick_(addr.district),
-"จังหวัด":pick_(addr.province),
-
-"ผู้บันทึก":pick_(data.recorderName),
-"ตำแหน่ง":pick_(data.recorderRole),
-
-"ลิงก์รูปเจ้าของ":ownerPhotoUrl||'',
-"ลิงก์รูปสัตว์":petPhotoUrl||''
-};
+  sheet.getRange(
+    2, column, Math.max(sheet.getMaxRows() - 1, 1), 1
+  ).setNumberFormat('@');
 }
 
 /******************** APPEND ********************/
-function appendSafe_(sheet,rowObj){
-autoAddMissingColumns_(sheet,rowObj);
-const headers = sheet.getRange(1,1,1,sheet.getLastColumn())
-.getValues()[0].map(h=>h.toString().trim());
-const row = headers.map(h=>rowObj[h]||'');
-if(row.join('').trim()!=='')
-sheet.appendRow(row);
+function appendSafe_(sheet, rowObj) {
+  autoAddMissingColumns_(sheet, rowObj);
+
+  // ตั้งรูปแบบข้อความก่อนเพิ่มแถว
+  setHouseNumberColumnText_(sheet);
+
+  const lastColumn = sheet.getLastColumn();
+
+  const headers = sheet.getRange(
+    1, 1, 1, lastColumn
+  ).getValues()[0].map(h => String(h).trim());
+
+  const row = headers.map(h => {
+    const value = rowObj[h];
+
+    if (h === 'บ้านเลขที่') {
+      return formatHouseNo_(value);
+    }
+
+    return value !== undefined && value !== null ? value : '';
+  });
+
+  if (row.some(v => v !== '' && v !== null && v !== undefined)) {
+    // เขียนด้วย setValues แทน appendRow และตั้งช่องบ้านเลขที่เป็นข้อความ
+    // ก่อนเขียน เพื่อป้องกัน Google Sheets แปลงค่า เช่น 23/3 ให้เป็นวันที่
+    const nextRow = sheet.getLastRow() + 1;
+    const houseIndex = headers.indexOf('บ้านเลขที่');
+
+    if (houseIndex >= 0) {
+      sheet.getRange(nextRow, houseIndex + 1, 1, 1).setNumberFormat('@');
+    }
+
+    sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+
+    // ย้ำรูปแบบข้อความหลังเขียน
+    if (houseIndex >= 0) {
+      sheet.getRange(nextRow, houseIndex + 1, 1, 1).setNumberFormat('@');
+    }
+  }
 }
 
-function ensureHeaders_(sheet){
-if(sheet.getLastRow()===0)
-sheet.appendRow(MASTER_HEADERS);
+function ensureHeaders_(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(MASTER_HEADERS);
+  }
 }
 
-function autoAddMissingColumns_(sheet,rowObj){
-let headers = sheet.getRange(1,1,1,sheet.getLastColumn())
-.getValues()[0].map(h=>h.toString().trim());
-Object.keys(rowObj).forEach(key=>{
-if(headers.indexOf(key)===-1){
-sheet.getRange(1,headers.length+1).setValue(key);
-headers.push(key);
-}
-});
+function autoAddMissingColumns_(sheet, rowObj) {
+  let headers = sheet.getRange(
+    1, 1, 1, sheet.getLastColumn()
+  ).getValues()[0].map(h => String(h).trim());
+
+  Object.keys(rowObj).forEach(key => {
+    if (headers.indexOf(key) === -1) {
+      sheet.getRange(1, headers.length + 1).setValue(key);
+      headers.push(key);
+    }
+  });
 }
 
 /******************** HELPERS ********************/
-function safe_(v){
-return (v===null||v===undefined)?'':v.toString().trim();
+function safe_(v) {
+  return (v === null || v === undefined) ? '' : String(v).trim();
 }
 
-function getOrCreateSheet_(ss,name){
-let s=ss.getSheetByName(name);
-if(!s)s=ss.insertSheet(name);
-return s;
-}
+function getOrCreateSheet_(ss, name) {
+  let sheet = ss.getSheetByName(name);
 
-function getOrCreateFolder_(parent,name){
-name=(name||'Unknown').toString().trim();
-if(!parent){
-const it=DriveApp.getFoldersByName(name);
-return it.hasNext()?it.next():DriveApp.createFolder(name);
-}
-const it=parent.getFoldersByName(name);
-return it.hasNext()?it.next():parent.createFolder(name);
-}
-
-function cleanName_(text){
-return (text||'').toString().trim()
-.replace(/\s+/g,'_')
-.replace(/[\\/:*?"<>|]/g,'');
-}
-
-
-function savePhotoSmart_(base64Data,folder,fileName){
-if(!base64Data||typeof base64Data!=='string')
-return '';
-
-try{
-
-let contentType = 'image/jpeg';
-
-/* ตัดช่องว่างหัวท้าย */
-base64Data = base64Data.trim();
-
-/* ถ้ามี header data:image/... */
-if(base64Data.indexOf('data:')===0){
-
-  const match = base64Data.match(/^data:(.*?);base64,/);
-  if(match && match[1]){
-    contentType = match[1];
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
   }
 
-  base64Data = base64Data.split('base64,')[1];
+  return sheet;
 }
 
-/* ลบ newline และ space */
-base64Data = base64Data.replace(/\s/g,'');
+function getOrCreateFolder_(parent, name) {
+  name = (name || 'Unknown').toString().trim();
 
-if(base64Data.length < 100){
-  Logger.log("BASE64 TOO SHORT");
+  if (!parent) {
+    const it = DriveApp.getFoldersByName(name);
+    return it.hasNext() ? it.next() : DriveApp.createFolder(name);
+  }
+
+  const it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+
+function cleanName_(text) {
+  return (text || '').toString().trim()
+    .replace(/\s+/g, '_')
+    .replace(/[\\/:*?"<>|]/g, '');
+}
+
+/******************** SAVE PHOTO ********************/
+function savePhotoSmart_(base64Data, folder, fileName) {
+  if (!base64Data || typeof base64Data !== 'string') {
+    return '';
+  }
+
+  try {
+    let contentType = 'image/jpeg';
+
+    base64Data = base64Data.trim();
+
+    if (base64Data.indexOf('data:') === 0) {
+      const match = base64Data.match(/^data:(.*?);base64,/);
+
+      if (match && match[1]) {
+        contentType = match[1];
+      }
+
+      base64Data = base64Data.split('base64,')[1];
+    }
+
+    base64Data = base64Data.replace(/\s/g, '');
+
+    if (!base64Data || base64Data.length < 100) {
+      Logger.log('BASE64 TOO SHORT');
+      return '';
+    }
+
+    const bytes = Utilities.base64Decode(base64Data);
+    const blob = Utilities.newBlob(bytes, contentType, fileName);
+    const file = folder.createFile(blob);
+
+    file.setSharing(
+      DriveApp.Access.ANYONE_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
+
+    return file.getUrl();
+
+  } catch (err) {
+    Logger.log('SAVE ERROR: ' + err);
+    return '';
+  }
+}
+
+function saveImageFromUrl_(url, folder, fileName) {
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const blob = response.getBlob();
+
+    const file = folder.createFile(blob).setName(fileName + '.jpg');
+
+    file.setSharing(
+      DriveApp.Access.ANYONE_WITH_LINK,
+      DriveApp.Permission.VIEW
+    );
+
+    return file.getUrl();
+
+  } catch (err) {
+    Logger.log(err);
+    return '';
+  }
+}
+
+/******************** OUTPUT ********************/
+function output_(msg, ok) {
+  return ContentService.createTextOutput(
+    JSON.stringify({
+      status: ok ? 'success' : 'error',
+      message: msg
+    })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+/******************** NORMALIZE ANIMAL TYPE ********************/
+function normalizeSummaryAnimalType_(rawType) {
+  const original = String(rawType || '').trim();
+  const t = original.toLowerCase();
+
+  if (/^(สุนัข|หมา|dog)(มีเจ้าของ|ไม่มีเจ้าของ)?$/.test(t)) {
+    return 'สุนัข';
+  }
+
+  if (/^(แมว|cat)(มีเจ้าของ|ไม่มีเจ้าของ)?$/.test(t)) {
+    return 'แมว';
+  }
+
+  if (/^(โค|วัว|cow)$/.test(t)) return 'โค';
+  if (t === 'เป็ด') return 'เป็ด';
+  if (t === 'ไก่') return 'ไก่';
+  if (/^(สุกร|หมู|pig)$/.test(t)) return 'สุกร';
+  if (t === 'นก') return 'นก';
+  if (t === 'แพะ') return 'แพะ';
+  if (t === 'ม้า') return 'ม้า';
+
+  if (t.startsWith('อื่น')) return 'อื่นๆ';
+
   return '';
 }
 
-const bytes = Utilities.base64Decode(base64Data);
-const blob = Utilities.newBlob(bytes, contentType, fileName);
-const file = folder.createFile(blob);
+/******************** SUMMARY AND DASHBOARD ********************/
+function buildSummaryAndDashboard() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheets = ss.getSheets();
 
-file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+  let allData = [];
 
-return file.getUrl();
+  /************ อ่านข้อมูลจากชีตชุมชน ************/
+  sheets.forEach(sheet => {
+    const name = sheet.getName();
 
-}catch(err){
-Logger.log("SAVE ERROR: "+err);
-return '';
-}
-}
+    if (name === 'SUMMARY_AUTO' || name === 'DASHBOARD_AUTO') {
+      return;
+    }
 
-function saveImageFromUrl_(url,folder,fileName){
-try{
-const response = UrlFetchApp.fetch(url);
-const blob = response.getBlob();
-const file = folder.createFile(blob).setName(fileName+'.jpg');
-file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
-return file.getUrl();
-}catch(e){
-Logger.log(e);
-return '';
-}
-}
+    const values = sheet.getDataRange().getValues();
 
-function output_(msg,ok){
-return ContentService.createTextOutput(
-JSON.stringify({status:ok?'success':'error',message:msg})
-).setMimeType(ContentService.MimeType.JSON);
-}
+    if (values.length < 2) return;
 
-function buildSummaryAndDashboard(){
+    const headers = values[0].map(h => String(h).trim());
+    const communityIndex = headers.indexOf('ชุมชน');
 
-const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-const sheets = ss.getSheets();
+    if (communityIndex === -1) return;
 
-/************ รวมข้อมูล ************/
-let allData = [];
-let headers = [];
+    let sampleCommunity = '';
 
-sheets.forEach(s=>{
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][communityIndex]) {
+        sampleCommunity = String(values[i][communityIndex]).trim();
+        break;
+      }
+    }
 
-  const name = s.getName();
+    // ป้องกันการนับข้อมูลจากชีตศูนย์ซ้ำ
+    if (!sampleCommunity || name !== sampleCommunity) return;
 
-  if(name === 'SUMMARY_AUTO' || name === 'DASHBOARD_AUTO') return;
+    values.slice(1).forEach(row => {
+      const obj = {};
 
-  const values = s.getDataRange().getValues();
-  if(values.length < 2) return;
+      headers.forEach((header, i) => {
+        obj[header] = row[i];
+      });
 
-  const headerRow = values[0].map(h => String(h).trim());
+      // บ้านเลขที่จากเซลล์ที่เป็น Date จะถูกจัดการตรงนี้ด้วย
+      obj['บ้านเลขที่'] = formatHouseNo_(obj['บ้านเลขที่']);
 
-  const comIdx = headerRow.indexOf("ชุมชน");
-  if(comIdx === -1) return;
-
-  // 🔥 เช็คว่า sheet นี้ = ชื่อชุมชนจริง
-  let sampleCommunity = '';
-
-for(let i=1;i<values.length;i++){
-  if(values[i][comIdx]){
-    sampleCommunity = values[i][comIdx];
-    break;
-  }
-}
-
-if(!sampleCommunity) return;
-
-
-  if(name !== sampleCommunity) return; // 💥 ตัวตัดสินจริง
-
-  if(headers.length === 0){
-    headers = headerRow;
-  }
-
-  values.slice(1).forEach(r=>{
-    allData.push(r);
+      allData.push(obj);
+    });
   });
 
-});
-
-if(allData.length === 0){
-  Logger.log("ไม่มีข้อมูล");
-  return;
-}
-
-/************ map index ************/
-const idx = {};
-headers.forEach((h,i)=>{
-  idx[String(h).trim()] = i;
-});
-
-/************ helper sort ************/
-function sortObj(obj){
-  return Object.fromEntries(
-    Object.entries(obj).sort((a,b)=>b[1]-a[1])
-  );
-}
-
-/************ ตัวเก็บค่า ************/
-let animalGender = {};
-let steril = {};
-let vaccine = {};
-let center = {};
-let community = {};
-let recorder = {};
-let byCenter = {};
-let byCommunity = {};
-let centerCommunityAnimal = {};
-
-/************ loop ************/
-allData.forEach(r=>{
-
-  const typeIndex = idx["ประเภทสัตว์"];
-
-let rawType = '';
-
-if (typeIndex !== undefined && r[typeIndex] !== undefined) {
-  rawType = r[typeIndex];
-}
-
-if (!rawType) rawType = 'ไม่ระบุ';
-
-// 👉 สร้าง type ก่อนใช้
-let type = String(rawType).trim();
-
-// 👉 แยก qty
-let qty = 1;
-
-if (type.startsWith('อื่น')) {
-  const otherIdx = idx["จำนวนสัตว์ (อื่น)"];
-  let raw = 0;
-
-  if (otherIdx !== undefined && r[otherIdx] !== undefined) {
-    raw = Number(r[otherIdx]);
+  if (allData.length === 0) {
+    Logger.log('ไม่มีข้อมูล');
+    return;
   }
 
-  qty = raw > 0 ? raw : 1;
-}
+  /************ ตัวเก็บค่าสรุป ************/
+  let animalGender = {};
+  let steril = {};
+  let vaccine = {};
+  let center = {};
+  let community = {};
+  let recorder = {};
+  let byCenter = {};
+  let byCommunity = {};
+  let centerCommunityAnimal = {};
 
-// 👉 normalize
-if (type.startsWith('อื่น')) {
-  type = 'อื่นๆ';
-}
+  /************ รวมข้อมูล ************/
+  allData.forEach(obj => {
+    let type = String(obj['ประเภทสัตว์'] || 'ไม่ระบุ').trim();
+    let qty = 1;
 
-  // 👇 ของเดิมใช้ต่อได้เลย
-  const gender = r[idx["เพศ"]] || 'ไม่ระบุ';
-  const ster = r[idx["สถานะทำหมัน"]] || 'ไม่ระบุ';
-  const vac = r[idx["สถานะวัคซีนพิษสุนัขบ้า"]] || 'ไม่ระบุ';
-  const cen = r[idx["ศูนย์บริการ"]] || 'ไม่ระบุ';
-  const com = r[idx["ชุมชน"]] || 'ไม่ระบุ';
-  const rec = r[idx["ผู้บันทึก"]] || 'ไม่ระบุ';
+    if (type.startsWith('อื่น')) {
+      const otherQty = Number(obj['จำนวนสัตว์ (อื่น)']);
+      qty = otherQty > 0 ? otherQty : 1;
+      type = 'อื่นๆ';
+    }
 
-  if(!animalGender[type]) animalGender[type] = {ผู้:0,เมีย:0,อื่นๆ:0};
+    const gender = obj['เพศ'] || 'ไม่ระบุ';
+    const ster = obj['สถานะทำหมัน'] || 'ไม่ระบุ';
+    const vac = obj['สถานะวัคซีนพิษสุนัขบ้า'] || 'ไม่ระบุ';
+    const cen = obj['ศูนย์บริการ'] || 'ไม่ระบุ';
+    const com = obj['ชุมชน'] || 'ไม่ระบุ';
+    const rec = obj['ผู้บันทึก'] || 'ไม่ระบุ';
 
-  if(gender === 'ผู้') animalGender[type]['ผู้'] += qty;
-  else if(gender === 'เมีย') animalGender[type]['เมีย'] += qty;
-  else animalGender[type]['อื่นๆ'] += qty;
+    if (!animalGender[type]) {
+      animalGender[type] = { ผู้: 0, เมีย: 0, อื่นๆ: 0 };
+    }
 
-  steril[ster] = (steril[ster]||0)+qty;
-  vaccine[vac] = (vaccine[vac]||0)+qty;
-  center[cen] = (center[cen]||0)+qty;
-  community[com] = (community[com]||0)+qty;
-  recorder[rec] = (recorder[rec]||0)+qty;
-/* ===== แยกตามศูนย์ ===== */
-const key = cen + "|" + com + "|" + type;
-centerCommunityAnimal[key] = (centerCommunityAnimal[key]||0)+qty;
-if(!byCenter[cen]){
-  byCenter[cen] = {
-    animalGender:{},
-    steril:{},
-    vaccine:{},
-    recorder:{}
-    /* ===== ศูนย์ + ชุมชน + ประเภทสัตว์ ===== */
-  };
-}
+    if (gender === 'ผู้') {
+      animalGender[type]['ผู้'] += qty;
+    } else if (gender === 'เมีย') {
+      animalGender[type]['เมีย'] += qty;
+    } else {
+      animalGender[type]['อื่นๆ'] += qty;
+    }
 
-if(!byCenter[cen].animalGender[type]){
-  byCenter[cen].animalGender[type] = {ผู้:0,เมีย:0,อื่นๆ:0};
-}
+    steril[ster] = (steril[ster] || 0) + qty;
+    vaccine[vac] = (vaccine[vac] || 0) + qty;
+    center[cen] = (center[cen] || 0) + qty;
+    community[com] = (community[com] || 0) + qty;
+    recorder[rec] = (recorder[rec] || 0) + qty;
 
-if(gender === 'ผู้') byCenter[cen].animalGender[type]['ผู้'] += qty;
-else if(gender === 'เมีย') byCenter[cen].animalGender[type]['เมีย'] += qty;
-else byCenter[cen].animalGender[type]['อื่นๆ'] += qty;
+    const key = cen + '|' + com + '|' + type;
 
-byCenter[cen].steril[ster] = (byCenter[cen].steril[ster]||0)+qty;
-byCenter[cen].vaccine[vac] = (byCenter[cen].vaccine[vac]||0)+qty;
-byCenter[cen].recorder[rec] = (byCenter[cen].recorder[rec]||0)+qty;
+    centerCommunityAnimal[key] =
+      (centerCommunityAnimal[key] || 0) + qty;
 
+    if (!byCenter[cen]) {
+      byCenter[cen] = {
+        animalGender: {},
+        steril: {},
+        vaccine: {},
+        recorder: {}
+      };
+    }
 
-/* ===== แยกตามชุมชน ===== */
-if(!byCommunity[com]){
-  byCommunity[com] = {
-    animalGender:{},
-    steril:{},
-    vaccine:{},
-    recorder:{}
-  };
-}
+    if (!byCenter[cen].animalGender[type]) {
+      byCenter[cen].animalGender[type] = {
+        ผู้: 0, เมีย: 0, อื่นๆ: 0
+      };
+    }
 
-if(!byCommunity[com].animalGender[type]){
-  byCommunity[com].animalGender[type] = {ผู้:0,เมีย:0,อื่นๆ:0};
-}
+    if (gender === 'ผู้') {
+      byCenter[cen].animalGender[type]['ผู้'] += qty;
+    } else if (gender === 'เมีย') {
+      byCenter[cen].animalGender[type]['เมีย'] += qty;
+    } else {
+      byCenter[cen].animalGender[type]['อื่นๆ'] += qty;
+    }
 
-if(gender === 'ผู้') byCommunity[com].animalGender[type]['ผู้'] += qty;
-else if(gender === 'เมีย') byCommunity[com].animalGender[type]['เมีย'] += qty;
-else byCommunity[com].animalGender[type]['อื่นๆ'] += qty;
+    byCenter[cen].steril[ster] =
+      (byCenter[cen].steril[ster] || 0) + qty;
 
-byCommunity[com].steril[ster] = (byCommunity[com].steril[ster]||0)+qty;
-byCommunity[com].vaccine[vac] = (byCommunity[com].vaccine[vac]||0)+qty;
-byCommunity[com].recorder[rec] = (byCommunity[com].recorder[rec]||0)+qty;
+    byCenter[cen].vaccine[vac] =
+      (byCenter[cen].vaccine[vac] || 0) + qty;
 
-});
+    byCenter[cen].recorder[rec] =
+      (byCenter[cen].recorder[rec] || 0) + qty;
 
-/************ sort ************/
-steril = sortObj(steril);
-vaccine = sortObj(vaccine);
-center = sortObj(center);
-community = sortObj(community);
-recorder = sortObj(recorder);
+    if (!byCommunity[com]) {
+      byCommunity[com] = {
+        animalGender: {},
+        steril: {},
+        vaccine: {},
+        recorder: {}
+      };
+    }
 
-/************ SUMMARY ************/
-let sumSheet = ss.getSheetByName('SUMMARY_AUTO');
-if(!sumSheet){
-  sumSheet = ss.insertSheet('SUMMARY_AUTO');
-}else{
-  sumSheet.clear();
-}
+    if (!byCommunity[com].animalGender[type]) {
+      byCommunity[com].animalGender[type] = {
+        ผู้: 0, เมีย: 0, อื่นๆ: 0
+      };
+    }
 
-/************ ประเภท+เพศ ************/
-sumSheet.getRange(1,1,1,4)
-.setValues([["ประเภทสัตว์","ผู้","เมีย","อื่นๆ"]]);
+    if (gender === 'ผู้') {
+      byCommunity[com].animalGender[type]['ผู้'] += qty;
+    } else if (gender === 'เมีย') {
+      byCommunity[com].animalGender[type]['เมีย'] += qty;
+    } else {
+      byCommunity[com].animalGender[type]['อื่นๆ'] += qty;
+    }
 
-let r = 2;
-Object.keys(animalGender).forEach(type=>{
-  const g = animalGender[type];
-  sumSheet.getRange(r,1,1,4)
-  .setValues([[type,g['ผู้'],g['เมีย'],g['อื่นๆ']]]);
-  r++;
-});
+    byCommunity[com].steril[ster] =
+      (byCommunity[com].steril[ster] || 0) + qty;
 
-let sectionStart = r + 2;
+    byCommunity[com].vaccine[vac] =
+      (byCommunity[com].vaccine[vac] || 0) + qty;
 
-/************ helper ************/
-function writeTable(title,obj,startRow){
+    byCommunity[com].recorder[rec] =
+      (byCommunity[com].recorder[rec] || 0) + qty;
+  });
 
-  sumSheet.getRange(startRow,1).setValue(title);
-  sumSheet.getRange(startRow+1,1,1,2)
-  .setValues([["รายการ","จำนวน"]]);
+  /************ เรียงลำดับ ************/
+  function sortObj(obj) {
+    return Object.fromEntries(
+      Object.entries(obj).sort((a, b) => b[1] - a[1])
+    );
+  }
 
-  let r = startRow+2;
+  steril = sortObj(steril);
+  vaccine = sortObj(vaccine);
+  center = sortObj(center);
+  community = sortObj(community);
+  recorder = sortObj(recorder);
 
-  Object.entries(obj).forEach(([k,v])=>{
-    sumSheet.getRange(r,1,1,2).setValues([[k,v]]);
+  /************ สร้าง SUMMARY_AUTO ************/
+  let sumSheet = ss.getSheetByName('SUMMARY_AUTO');
+
+  if (!sumSheet) {
+    sumSheet = ss.insertSheet('SUMMARY_AUTO');
+  } else {
+    sumSheet.clear();
+  }
+
+  /************ ประเภทสัตว์ + เพศ ************/
+  sumSheet.getRange(1, 1, 1, 4)
+    .setValues([['ประเภทสัตว์', 'ผู้', 'เมีย', 'อื่นๆ']]);
+
+  let r = 2;
+
+  Object.keys(animalGender).forEach(type => {
+    const g = animalGender[type];
+
+    sumSheet.getRange(r, 1, 1, 4).setValues([[
+      type, g['ผู้'], g['เมีย'], g['อื่นๆ']
+    ]]);
+
     r++;
   });
 
-  return {start:startRow+1,end:r-1,next:r+2};
-}
+  /************ ตารางสรุปทั่วไป ************/
+  function writeTable(title, obj, startRow) {
+    sumSheet.getRange(startRow, 1).setValue(title);
 
-const t1 = writeTable("สถานะทำหมัน",steril,sectionStart);
-const t2 = writeTable("วัคซีนพิษสุนัขบ้า",vaccine,t1.next);
-const t3 = writeTable("ศูนย์บริการ",center,t2.next);
-const t4 = writeTable("ชุมชน",community,t3.next);
-const t5 = writeTable("ผู้บันทึก",recorder,t4.next);
-let nextRow = t5.next;
-/************ ศูนย์ + ชุมชน + ประเภทสัตว์ ************/
-sumSheet.getRange(nextRow,1).setValue("ศูนย์ + ชุมชน + ประเภทสัตว์");
-sumSheet.getRange(nextRow+1,1,1,4)
-.setValues([["ศูนย์","ชุมชน","ประเภทสัตว์","จำนวน"]]);
+    sumSheet.getRange(startRow + 1, 1, 1, 2)
+      .setValues([['รายการ', 'จำนวน']]);
 
-let rcc = nextRow + 2;
+    let rr = startRow + 2;
 
-Object.entries(centerCommunityAnimal).forEach(([k,v])=>{
-  const [c,cm,t] = k.split("|");
-  sumSheet.getRange(rcc,1,1,4).setValues([[c,cm,t,v]]);
-  rcc++;
-});
+    Object.entries(obj).forEach(([key, value]) => {
+      sumSheet.getRange(rr, 1, 1, 2)
+        .setValues([[key, value]]);
+      rr++;
+    });
 
-let centerComStart = nextRow+1;
-let centerComEnd = rcc-1;
+    return { next: rr + 2 };
+  }
 
-nextRow = rcc + 3;
+  let sectionStart = r + 2;
 
-/************ แยกตามศูนย์ ************/
-Object.keys(byCenter).forEach(cen=>{
+  const t1 = writeTable('สถานะทำหมัน', steril, sectionStart);
+  const t2 = writeTable('วัคซีนพิษสุนัขบ้า', vaccine, t1.next);
+  const t3 = writeTable('ศูนย์บริการ', center, t2.next);
+  const t4 = writeTable('ชุมชน', community, t3.next);
+  const t5 = writeTable('ผู้บันทึก', recorder, t4.next);
 
-  sumSheet.getRange(nextRow,1).setValue("ศูนย์: "+cen);
-  nextRow++;
+  let nextRow = t5.next;
 
-  Object.entries(byCenter[cen].steril).forEach(([k,v])=>{
-    sumSheet.getRange(nextRow,1,1,2).setValues([[k,v]]);
-    nextRow++;
+  /************ ศูนย์ + ชุมชน + ประเภทสัตว์ ************/
+  sumSheet.getRange(nextRow, 1)
+    .setValue('ศูนย์ + ชุมชน + ประเภทสัตว์');
+
+  sumSheet.getRange(nextRow + 1, 1, 1, 4)
+    .setValues([['ศูนย์', 'ชุมชน', 'ประเภทสัตว์', 'จำนวน']]);
+
+  let rcc = nextRow + 2;
+
+  Object.entries(centerCommunityAnimal).forEach(([key, value]) => {
+    const [cen, com, type] = key.split('|');
+
+    sumSheet.getRange(rcc, 1, 1, 4)
+      .setValues([[cen, com, type, value]]);
+
+    rcc++;
   });
 
-  nextRow+=2;
-});
+  nextRow = rcc + 3;
 
-/************ แยกตามชุมชน ************/
-Object.keys(byCommunity).forEach(com=>{
-
-  sumSheet.getRange(nextRow,1).setValue("ชุมชน: "+com);
-  nextRow++;
-
-  Object.entries(byCommunity[com].steril).forEach(([k,v])=>{
-    sumSheet.getRange(nextRow,1,1,2).setValues([[k,v]]);
+  /************ สรุปแยกตามศูนย์ ************/
+  Object.keys(byCenter).forEach(cen => {
+    sumSheet.getRange(nextRow, 1).setValue('ศูนย์: ' + cen);
     nextRow++;
+
+    Object.entries(byCenter[cen].steril).forEach(([key, value]) => {
+      sumSheet.getRange(nextRow, 1, 1, 2)
+        .setValues([[key, value]]);
+      nextRow++;
+    });
+
+    nextRow += 2;
   });
 
-  nextRow+=2;
-});
+  /************ สรุปแยกตามชุมชน ************/
+  Object.keys(byCommunity).forEach(com => {
+    sumSheet.getRange(nextRow, 1).setValue('ชุมชน: ' + com);
+    nextRow++;
 
+    Object.entries(byCommunity[com].steril).forEach(([key, value]) => {
+      sumSheet.getRange(nextRow, 1, 1, 2)
+        .setValues([[key, value]]);
+      nextRow++;
+    });
+
+    nextRow += 2;
+  });
+
+  /****************************************************************
+   * ตารางใหม่: สรุปสัตว์รายศูนย์-ชุมชน-บ้านเลขที่-ถนน
+   ****************************************************************/
+  const animalColumns = [
+    'สุนัข', 'แมว', 'โค', 'เป็ด', 'ไก่',
+    'สุกร', 'นก', 'แพะ', 'ม้า', 'อื่นๆ'
+  ];
+
+  const addressSummary = {};
+
+  allData.forEach(obj => {
+    const cen = String(obj['ศูนย์บริการ'] || 'ไม่ระบุ').trim();
+    const com = String(obj['ชุมชน'] || 'ไม่ระบุ').trim();
+
+    // อ่านบ้านเลขที่อย่างระมัดระวัง
+    const houseNo = formatHouseNo_(obj['บ้านเลขที่']) || 'ไม่ระบุ';
+
+    const road = String(obj['ถนน'] || 'ไม่ระบุ').trim();
+
+    const key = JSON.stringify([cen, com, houseNo, road]);
+
+    if (!addressSummary[key]) {
+      addressSummary[key] = {
+        center: cen,
+        community: com,
+        houseNo: houseNo,
+        road: road,
+        counts: {
+          'สุนัข': 0,
+          'แมว': 0,
+          'โค': 0,
+          'เป็ด': 0,
+          'ไก่': 0,
+          'สุกร': 0,
+          'นก': 0,
+          'แพะ': 0,
+          'ม้า': 0,
+          'อื่นๆ': 0
+        }
+      };
+    }
+
+    const rawType = String(obj['ประเภทสัตว์'] || '').trim();
+    const normalizedType = normalizeSummaryAnimalType_(rawType);
+
+    // ไม่รวมประเภทที่ไม่ตรงกับคอลัมน์ที่กำหนด
+    if (!normalizedType) return;
+
+    let qty = 1;
+
+    if (normalizedType === 'อื่นๆ') {
+      const otherQty = Number(obj['จำนวนสัตว์ (อื่น)']);
+      qty = otherQty > 0 ? otherQty : 1;
+    }
+
+    addressSummary[key].counts[normalizedType] += qty;
+  });
+
+  /************ เขียนตารางบ้านเลขที่ ************/
+  nextRow += 1;
+
+  sumSheet.getRange(nextRow, 1)
+    .setValue('สรุปสัตว์รายศูนย์-ชุมชน-บ้านเลขที่-ถนน');
+
+  const addressHeaders = [
+    'ศูนย์', 'ชุมชน', 'บ้านเลขที่', 'ถนน',
+    'สุนัข', 'แมว', 'โค', 'เป็ด', 'ไก่',
+    'สุกร', 'นก', 'แพะ', 'ม้า', 'อื่นๆ'
+  ];
+
+  sumSheet.getRange(
+    nextRow + 1, 1, 1, addressHeaders.length
+  ).setValues([addressHeaders]);
+
+  const addressRows = Object.values(addressSummary)
+    .sort((a, b) => {
+      const c1 = a.center.localeCompare(b.center, 'th');
+      if (c1 !== 0) return c1;
+
+      const c2 = a.community.localeCompare(b.community, 'th');
+      if (c2 !== 0) return c2;
+
+      const c3 = a.houseNo.localeCompare(b.houseNo, 'th');
+      if (c3 !== 0) return c3;
+
+      return a.road.localeCompare(b.road, 'th');
+    })
+    .map(item => [
+      item.center,
+      item.community,
+      item.houseNo,
+      item.road,
+      ...animalColumns.map(animal => item.counts[animal])
+    ]);
+
+  if (addressRows.length > 0) {
+    // ตั้งคอลัมน์บ้านเลขที่ในตารางสรุปเป็นข้อความก่อนเขียน
+    sumSheet.getRange(
+      nextRow + 2, 3, addressRows.length, 1
+    ).setNumberFormat('@');
+
+    sumSheet.getRange(
+      nextRow + 2, 1,
+      addressRows.length,
+      addressHeaders.length
+    ).setValues(addressRows);
+
+    // ย้ำรูปแบบข้อความหลังเขียน
+    sumSheet.getRange(
+      nextRow + 2, 3, addressRows.length, 1
+    ).setNumberFormat('@');
+  }
+
+  /************ จัดรูปแบบ ************/
+  sumSheet.getRange(
+    nextRow + 1, 1, 1, addressHeaders.length
+  ).setFontWeight('bold');
+
+  sumSheet.getRange(
+    nextRow + 1, 1,
+    Math.max(addressRows.length + 1, 1),
+    addressHeaders.length
+  ).setVerticalAlignment('middle');
+
+  sumSheet.setFrozenRows(1);
+  sumSheet.autoResizeColumns(1, addressHeaders.length);
+
+  Logger.log(
+    'สร้าง SUMMARY_AUTO สำเร็จ: ' +
+    addressRows.length + ' รายการบ้าน'
+  );
 }
