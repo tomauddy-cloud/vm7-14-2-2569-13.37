@@ -551,6 +551,37 @@ function output_(msg, ok) {
   ).setMimeType(ContentService.MimeType.JSON);
 }
 
+/******************** ZONE RESPONSIBILITY ********************/
+/**
+ * กำหนดเขตพื้นที่รับผิดชอบตามศูนย์บริการสาธารณสุข
+ * เขต 1: ศูนย์ที่ 2 และ 6
+ * เขต 2: ศูนย์ที่ 7
+ * เขต 3: ศูนย์ที่ 1 และ 3
+ * เขต 4: ศูนย์ที่ 4 และ 5
+ */
+function getResponsibilityZone_(centerName) {
+  const name = String(centerName || '').trim();
+  const match = name.match(/ศูนย์ที่\s*([1-7])/);
+  if (!match) return 'ไม่ระบุเขต';
+
+  const centerNo = Number(match[1]);
+  const zoneMap = {
+    2: 'เขต 1',
+    6: 'เขต 1',
+    7: 'เขต 2',
+    1: 'เขต 3',
+    3: 'เขต 3',
+    4: 'เขต 4',
+    5: 'เขต 4'
+  };
+  return zoneMap[centerNo] || 'ไม่ระบุเขต';
+}
+
+function responsibilityZoneOrder_(zone) {
+  const order = { 'เขต 1': 1, 'เขต 2': 2, 'เขต 3': 3, 'เขต 4': 4, 'ไม่ระบุเขต': 99 };
+  return order[zone] || 99;
+}
+
 /******************** NORMALIZE ANIMAL TYPE ********************/
 function normalizeSummaryAnimalType_(rawType) {
   const original = String(rawType || '').trim();
@@ -886,6 +917,7 @@ function buildSummaryAndDashboard() {
 
     if (!addressSummary[key]) {
       addressSummary[key] = {
+        zone: getResponsibilityZone_(cen),
         center: cen,
         community: com,
         houseNo: houseNo,
@@ -928,7 +960,7 @@ function buildSummaryAndDashboard() {
     .setValue('สรุปสัตว์รายศูนย์-ชุมชน-บ้านเลขที่-ถนน');
 
   const addressHeaders = [
-    'ศูนย์', 'ชุมชน', 'บ้านเลขที่', 'ถนน',
+    'เขตพื้นที่รับผิดชอบ', 'ศูนย์', 'ชุมชน', 'บ้านเลขที่', 'ถนน',
     'สุนัข', 'แมว', 'โค', 'เป็ด', 'ไก่',
     'สุกร', 'นก', 'แพะ', 'ม้า', 'อื่นๆ'
   ];
@@ -939,6 +971,9 @@ function buildSummaryAndDashboard() {
 
   const addressRows = Object.values(addressSummary)
     .sort((a, b) => {
+      const z = responsibilityZoneOrder_(a.zone) - responsibilityZoneOrder_(b.zone);
+      if (z !== 0) return z;
+
       const c1 = a.center.localeCompare(b.center, 'th');
       if (c1 !== 0) return c1;
 
@@ -951,6 +986,7 @@ function buildSummaryAndDashboard() {
       return a.road.localeCompare(b.road, 'th');
     })
     .map(item => [
+      item.zone,
       item.center,
       item.community,
       item.houseNo,
@@ -961,7 +997,7 @@ function buildSummaryAndDashboard() {
   if (addressRows.length > 0) {
     // ตั้งคอลัมน์บ้านเลขที่ในตารางสรุปเป็นข้อความก่อนเขียน
     sumSheet.getRange(
-      nextRow + 2, 3, addressRows.length, 1
+      nextRow + 2, 4, addressRows.length, 1
     ).setNumberFormat('@');
 
     sumSheet.getRange(
@@ -972,7 +1008,7 @@ function buildSummaryAndDashboard() {
 
     // ย้ำรูปแบบข้อความหลังเขียน
     sumSheet.getRange(
-      nextRow + 2, 3, addressRows.length, 1
+      nextRow + 2, 4, addressRows.length, 1
     ).setNumberFormat('@');
   }
 
@@ -987,11 +1023,47 @@ function buildSummaryAndDashboard() {
     addressHeaders.length
   ).setVerticalAlignment('middle');
 
+  /************ ตารางรวมจำนวนสัตว์ตามเขตและศูนย์บริการ ************/
+  const zoneCenterTotals = {};
+  Object.values(addressSummary).forEach(item => {
+    const key = JSON.stringify([item.zone, item.center]);
+    if (!zoneCenterTotals[key]) {
+      zoneCenterTotals[key] = { zone: item.zone, center: item.center, counts: {} };
+      animalColumns.forEach(animal => zoneCenterTotals[key].counts[animal] = 0);
+    }
+    animalColumns.forEach(animal => {
+      zoneCenterTotals[key].counts[animal] += item.counts[animal] || 0;
+    });
+  });
+
+  const zoneTableStart = nextRow + Math.max(addressRows.length, 1) + 4;
+  sumSheet.getRange(zoneTableStart, 1).setValue('สรุปจำนวนสัตว์ตามเขตพื้นที่รับผิดชอบและศูนย์บริการ');
+  const zoneHeaders = ['เขตพื้นที่รับผิดชอบ', 'ศูนย์', ...animalColumns, 'รวมทั้งหมด'];
+  sumSheet.getRange(zoneTableStart + 1, 1, 1, zoneHeaders.length).setValues([zoneHeaders]);
+
+  const zoneRows = Object.values(zoneCenterTotals)
+    .sort((a, b) => {
+      const z = responsibilityZoneOrder_(a.zone) - responsibilityZoneOrder_(b.zone);
+      return z !== 0 ? z : a.center.localeCompare(b.center, 'th');
+    })
+    .map(item => {
+      const counts = animalColumns.map(animal => item.counts[animal] || 0);
+      const total = counts.reduce((sum, value) => sum + value, 0);
+      return [item.zone, item.center, ...counts, total];
+    });
+
+  if (zoneRows.length) {
+    sumSheet.getRange(zoneTableStart + 2, 1, zoneRows.length, zoneHeaders.length).setValues(zoneRows);
+  }
+
+  sumSheet.getRange(zoneTableStart + 1, 1, 1, zoneHeaders.length).setFontWeight('bold');
+  sumSheet.getRange(zoneTableStart + 1, 1, Math.max(zoneRows.length + 1, 1), zoneHeaders.length).setVerticalAlignment('middle');
+
   sumSheet.setFrozenRows(1);
-  sumSheet.autoResizeColumns(1, addressHeaders.length);
+  sumSheet.autoResizeColumns(1, Math.max(addressHeaders.length, zoneHeaders.length));
 
   Logger.log(
     'สร้าง SUMMARY_AUTO สำเร็จ: ' +
-    addressRows.length + ' รายการบ้าน'
+    addressRows.length + ' รายการบ้าน และสรุปตามเขตพื้นที่รับผิดชอบ ' + zoneRows.length + ' รายการศูนย์'
   );
 }
