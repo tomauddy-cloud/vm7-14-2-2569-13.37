@@ -22,7 +22,7 @@ const MASTER_HEADERS = [
 function doPost(e) {
   const lock = LockService.getScriptLock();
 
-  if (!lock.tryLock(10000)) {
+  if (!lock.tryLock(30000)) {
     return output_('ระบบกำลังประมวลผล กรุณาลองใหม่');
   }
 
@@ -173,15 +173,39 @@ function doPost(e) {
       appendSafe_(communitySheet, rowObj);
     });
 
-    buildSummaryAndDashboard();
+    // บันทึกข้อมูลหลักเสร็จแล้ว ให้ตอบกลับทันที ไม่รอสร้างรายงานทั้งชุด
+    // เพื่อป้องกันมือถือหมดเวลารอและแจ้งว่าบันทึกไม่สำเร็จทั้งที่ข้อมูลเข้าแล้ว
+    ensureSummaryTrigger_();
 
-    return output_('success', true);
+    return output_('บันทึกข้อมูลสำเร็จ', true);
 
   } catch (err) {
     Logger.log(err.stack || err);
     return output_(err.message || String(err));
   } finally {
     lock.releaseLock();
+  }
+}
+
+/******************** AUTO SUMMARY TRIGGER ********************/
+/**
+ * สร้าง Trigger สรุปข้อมูลทุก 5 นาทีเพียงครั้งเดียว
+ * แยกการสร้างรายงานออกจากการบันทึก เพื่อลดเวลารอของมือถือ
+ */
+function ensureSummaryTrigger_() {
+  try {
+    const exists = ScriptApp.getProjectTriggers().some(trigger =>
+      trigger.getHandlerFunction() === 'buildSummaryAndDashboard'
+    );
+    if (!exists) {
+      ScriptApp.newTrigger('buildSummaryAndDashboard')
+        .timeBased()
+        .everyMinutes(5)
+        .create();
+    }
+  } catch (err) {
+    // ไม่ให้ปัญหาการสร้าง Trigger ทำให้การบันทึกข้อมูลล้มเหลว
+    Logger.log('ตั้ง Trigger สรุปข้อมูลไม่สำเร็จ: ' + (err.stack || err));
   }
 }
 
