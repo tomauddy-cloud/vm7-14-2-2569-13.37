@@ -2,7 +2,12 @@
 const SPREADSHEET_ID = '1yF2jIPcKXgGLDQFcsDABY-zQeoj87XquGaENwTgN8xQ';
 const ROOT_FOLDER_NAME = 'AnimalSurvey_OwnerPhotos';
 const TIME_ZONE = 'Asia/Bangkok';
+
+// ปีของโฟลเดอร์รูปภาพใน Drive (บังคับให้เป็น 2569 เสมอ)
 const PHOTO_FOLDER_YEAR = '2569';
+
+// รูปแบบการแสดง timestamp ในชีต (วันที่ + เวลา)
+const TIMESTAMP_FORMAT = 'dd/MM/yyyy, HH:mm:ss';
 
 /******************** MASTER HEADER ********************/
 const MASTER_HEADERS = [
@@ -74,22 +79,17 @@ function doPost(e) {
     // ตั้งคอลัมน์บ้านเลขที่เป็นข้อความก่อนบันทึก
     setHouseNumberColumnText_(centerSheet);
     setHouseNumberColumnText_(communitySheet);
- 
-/************ DRIVE ************/
-const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
 
-// บังคับให้รูปภาพทั้งหมดบันทึกลงโฟลเดอร์ปี 2569
-const yearFolder = getOrCreateFolder_(
-  rootFolder, PHOTO_FOLDER_YEAR
-);
-
-const centerFolder = getOrCreateFolder_(
-  yearFolder, cleanName_(centerName)
-);
-
-const communityFolder = getOrCreateFolder_(
-  centerFolder, cleanName_(communityName)
-);
+    /************ DRIVE ************/
+    const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
+    // บังคับให้รูปภาพทั้งหมดบันทึกลงโฟลเดอร์ปี 2569
+    const yearFolder = getOrCreateFolder_(rootFolder, PHOTO_FOLDER_YEAR);
+    const centerFolder = getOrCreateFolder_(
+      yearFolder, cleanName_(centerName)
+    );
+    const communityFolder = getOrCreateFolder_(
+      centerFolder, cleanName_(communityName)
+    );
 
     /************ OWNER FOLDER ************/
     const ownerNameClean = cleanName_(
@@ -448,11 +448,53 @@ function appendSafe_(sheet, rowObj) {
 
     sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
 
+    // ตั้งรูปแบบ timestamp ให้แสดงทั้งวันที่และเวลา
+    const tsIndex = headers.indexOf('timestamp');
+    if (tsIndex >= 0) {
+      sheet.getRange(nextRow, tsIndex + 1, 1, 1)
+        .setNumberFormat(TIMESTAMP_FORMAT);
+    }
+
     // ย้ำรูปแบบข้อความหลังเขียน
     if (houseIndex >= 0) {
       sheet.getRange(nextRow, houseIndex + 1, 1, 1).setNumberFormat('@');
     }
   }
+}
+
+/**
+ * รันครั้งเดียวด้วยมือ (เลือกฟังก์ชันนี้แล้วกด Run)
+ * เพื่อแก้รูปแบบ timestamp ของแถวเดิมในทุกชีตให้แสดงเวลาด้วย
+ * ดูผลว่าชีตไหนแก้แล้ว/ข้ามเพราะอะไร ได้ที่ View > Execution log
+ */
+function fixTimestampFormatAllSheets() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  ss.getSheets().forEach(sheet => {
+    const name = sheet.getName();
+    const lastColumn = sheet.getLastColumn();
+
+    if (lastColumn < 1 || sheet.getLastRow() < 1) {
+      Logger.log('ข้าม (ชีตว่าง): ' + name);
+      return;
+    }
+
+    const headers = sheet.getRange(1, 1, 1, lastColumn)
+      .getDisplayValues()[0].map(h => String(h).trim().toLowerCase());
+
+    const tsIndex = headers.indexOf('timestamp');
+
+    if (tsIndex === -1) {
+      Logger.log('ข้าม (ไม่พบหัวคอลัมน์ timestamp): ' + name);
+      return;
+    }
+
+    // ตั้งรูปแบบทั้งคอลัมน์ (รวมแถวว่างด้านล่าง)
+    sheet.getRange(2, tsIndex + 1, Math.max(sheet.getMaxRows() - 1, 1), 1)
+      .setNumberFormat(TIMESTAMP_FORMAT);
+
+    Logger.log('แก้แล้ว: ' + name);
+  });
 }
 
 function ensureHeaders_(sheet) {
