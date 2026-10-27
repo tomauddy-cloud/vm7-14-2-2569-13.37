@@ -2,6 +2,7 @@
 const SPREADSHEET_ID = '1yF2jIPcKXgGLDQFcsDABY-zQeoj87XquGaENwTgN8xQ';
 const ROOT_FOLDER_NAME = 'AnimalSurvey_OwnerPhotos';
 const TIME_ZONE = 'Asia/Bangkok';
+const PHOTO_FOLDER_YEAR = '2569';
 
 /******************** MASTER HEADER ********************/
 const MASTER_HEADERS = [
@@ -73,16 +74,22 @@ function doPost(e) {
     // ตั้งคอลัมน์บ้านเลขที่เป็นข้อความก่อนบันทึก
     setHouseNumberColumnText_(centerSheet);
     setHouseNumberColumnText_(communitySheet);
+ 
+/************ DRIVE ************/
+const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
 
-    /************ DRIVE ************/
-    const rootFolder = getOrCreateFolder_(null, ROOT_FOLDER_NAME);
-    const yearFolder = getOrCreateFolder_(rootFolder, year);
-    const centerFolder = getOrCreateFolder_(
-      yearFolder, cleanName_(centerName)
-    );
-    const communityFolder = getOrCreateFolder_(
-      centerFolder, cleanName_(communityName)
-    );
+// บังคับให้รูปภาพทั้งหมดบันทึกลงโฟลเดอร์ปี 2569
+const yearFolder = getOrCreateFolder_(
+  rootFolder, PHOTO_FOLDER_YEAR
+);
+
+const centerFolder = getOrCreateFolder_(
+  yearFolder, cleanName_(centerName)
+);
+
+const communityFolder = getOrCreateFolder_(
+  centerFolder, cleanName_(communityName)
+);
 
     /************ OWNER FOLDER ************/
     const ownerNameClean = cleanName_(
