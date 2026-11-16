@@ -1,12 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบสำรวจสัตว์ งานสัตวแพทย์</title>
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+
+
 @import url("https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap");
 
 :root {
@@ -347,11 +348,137 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
     * { transition: none !important; }
 }
 
+
+/* ===== แผนที่บ้านสำรวจ ===== */
+.house-map-panel{margin:18px 0;padding:16px;background:#f7f9ff;border:1px solid #d9deec;border-radius:14px}
+.house-map-panel h3{margin-top:0;color:#24377f}
+.house-map-help{font-size:14px;color:#5d6785;margin:4px 0 12px}
+.house-map-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.house-map-actions button{border:0;border-radius:9px;padding:10px 14px;background:#2c3e90;color:#fff;font:inherit;cursor:pointer}
+.house-map-actions button.secondary{background:#56627f}
+#houseMap{height:360px;width:100%;border-radius:12px;border:1px solid #ccd4e8;z-index:1}
+.house-map-legend{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;font-size:13px}
+.house-map-legend span{display:inline-flex;align-items:center;gap:5px}
+.house-dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 2px #333}
+.house-dot.done{background:#16a34a}.house-dot.pending{background:#eab308}
+.house-map-message{font-size:14px;color:#39445f;margin-top:8px}
+.house-map-coords{font-size:12px;color:#69738c}
+.leaflet-house-label{font-weight:bold;color:#172554;text-shadow:0 1px 2px white,1px 0 2px white}
+@media(max-width:600px){#houseMap{height:300px}.house-map-panel{padding:12px}}
+
+
+
+/* ===== Responsive layout: mobile, tablet and desktop ===== */
+*, *::before, *::after { box-sizing: border-box; }
+html { width: 100%; min-width: 320px; -webkit-text-size-adjust: 100%; }
+body { width: 100%; min-width: 320px; margin: 0; overflow-x: hidden; }
+img, video, canvas, iframe { max-width: 100%; }
+header { width: 100%; }
+.header-brand { max-width: 1440px; }
+main { width: min(1240px, calc(100% - 40px)); max-width: 1240px; }
+#centerPage, #formPage, form, .house-map-panel { min-width: 0; }
+.center-list { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+input, select, textarea, button { max-width: 100%; }
+input, select, textarea { min-height: 44px; font-size: 16px; }
+button { min-height: 42px; touch-action: manipulation; }
+#houseMap { width: 100%; min-height: 280px; }
+.leaflet-container { font: inherit; }
+
+@media (min-width: 1100px) {
+  main { padding: 34px 38px; }
+  .center-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  #houseMap { height: min(58vh, 560px); }
+}
+@media (min-width: 601px) and (max-width: 1099px) {
+  main { width: calc(100% - 32px); padding: 26px; }
+  .center-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #houseMap { height: 400px; }
+}
+@media (max-width: 600px) {
+  body { font-size: 15px; }
+  header { padding: 10px 6px; }
+  .header-brand { grid-template-columns: 52px minmax(0, 1fr) 76px; gap: 5px; padding: 4px 2px; }
+  .municipality-logo { width: 48px; height: 48px; }
+  .header-person { width: 74px; height: 90px; }
+  .header-title { overflow-wrap: anywhere; }
+  .header-title h1 { font-size: clamp(14px, 4vw, 19px); line-height: 1.3; }
+  .header-title h2, .header-title h3, .header-title p { font-size: clamp(10px, 2.8vw, 13px); line-height: 1.35; }
+  main { width: calc(100% - 16px); margin: 8px auto 16px; padding: 16px 12px; border-radius: 12px; }
+  main h2 { font-size: 18px; margin-bottom: 16px; }
+  .center-list { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .center-card { padding: 13px 12px; }
+  .center-card button, .page-button, .house-map-actions button { min-height: 46px; padding: 11px 14px; font-size: 15px; }
+  label { margin-top: 13px; font-size: 14px; }
+  input, select, textarea { padding: 12px; font-size: 16px; }
+  .house-map-panel { margin: 14px 0; padding: 10px; border-radius: 12px; }
+  .house-map-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .house-map-actions button { width: 100%; }
+  #houseMap { height:  min(52vh, 360px); min-height: 260px; }
+  .house-map-legend { gap: 8px 12px; font-size: 12px; }
+  .house-map-help, .house-map-message { font-size: 13px; }
+  .photo-preview { width: 104px; height: 104px; }
+  .save-button { position: static; margin-top: 20px; padding: 14px 16px; font-size: 16px; }
+  footer { padding-left: 10px; padding-right: 10px; }
+}
+@media (max-width: 360px) {
+  .header-brand { grid-template-columns: 42px minmax(0, 1fr) 60px; gap: 3px; }
+  .municipality-logo { width: 40px; height: 40px; }
+  .header-person { width: 58px; height: 76px; }
+  main { padding: 13px 9px; }
+}
+
+
+/* ===== Fix: keep Leaflet map strictly inside its responsive frame ===== */
+.house-map-panel {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+#houseMap {
+  position: relative !important;
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  overflow: hidden;
+  isolation: isolate;
+  contain: layout paint;
+}
+#houseMap .leaflet-pane,
+#houseMap .leaflet-control-container {
+  max-width: 100%;
+}
+#houseMap .leaflet-tile-pane,
+#houseMap .leaflet-overlay-pane,
+#houseMap .leaflet-marker-pane,
+#houseMap .leaflet-tooltip-pane,
+#houseMap .leaflet-popup-pane {
+  overflow: visible;
+}
+@media (max-width: 600px) {
+  .house-map-panel { margin-left: 0; margin-right: 0; padding: 10px; }
+  #houseMap { width: 100% !important; height: min(52vh, 360px); min-height: 250px; }
+}
+
+/* ===== Detailed map controls ===== */
+#houseMap { min-height: 340px; background: #e8edf3; }
+#houseMap .leaflet-control-layers { border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.18); font-size: 13px; }
+#houseMap .leaflet-control-layers-expanded { padding: 9px 11px; }
+#houseMap .leaflet-control-zoom a { width: 34px; height: 34px; line-height: 34px; }
+@media (min-width: 1100px) { #houseMap { height: min(68vh, 650px); } }
+@media (max-width: 600px) { #houseMap { height: min(62vh, 480px); min-height: 320px; } #houseMap .leaflet-control-layers { max-width: 190px; } }
+
+/* ===== รวมแผนที่ให้เป็นผืนเดียว: กัน tile แยกเป็นชิ้น + ล็อกขนาดกรอบ ===== */
+#houseMap img.leaflet-tile { max-width: none !important; }
+
 </style>
 </head>
-
 <body>
-
 <header>
     <div class="header-brand">
 
@@ -584,7 +711,6 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
     id="citizenId"
     maxlength="13"
     minlength="13"
-    pattern="\d{13}"
     required>
 
 <h3 style="margin-top:20px">
@@ -610,6 +736,27 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
     required>
 
 </div>
+
+
+<section class="house-map-panel" aria-labelledby="houseMapHeading">
+  <h3 id="houseMapHeading">เลือกตำแหน่งบ้านที่สำรวจ</h3>
+  <p class="house-map-help">กดใช้ GPS เมื่ออยู่หน้าบ้าน หรือแตะบนแผนที่เพื่อปักหมุดบ้านด้วยตนเอง จากนั้นกรอกบ้านเลขที่</p>
+  <div class="house-map-actions">
+    <button type="button" onclick="useCurrentGPS()">📍 ใช้ตำแหน่ง GPS ปัจจุบัน</button>
+    <button type="button" class="secondary" onclick="enableMapPick()">แตะเลือกจุดบนแผนที่</button>
+    <button type="button" class="secondary" onclick="savePendingHouseMarker()">บันทึกหมุดบ้าน (ยังไม่ได้สำรวจ)</button>
+    <button type="button" class="secondary" onclick="showAllHouseMarkers()">แสดงบ้านทั้งหมด</button>
+  </div>
+  <div class="house-map-legend">
+    <span><i class="house-dot done"></i> สำรวจแล้ว</span>
+    <span><i class="house-dot pending"></i> ยังไม่ได้สำรวจ / ปักหมุดรอสำรวจ</span>
+  </div>
+  <div id="houseMap" role="application" aria-label="แผนที่เลือกตำแหน่งบ้าน"></div>
+  <div id="houseMapMessage" class="house-map-message" aria-live="polite">กำลังเตรียมแผนที่…</div>
+  <div id="houseMapCoords" class="house-map-coords">ยังไม่ได้เลือกพิกัด</div>
+  <input type="hidden" id="houseLat" name="houseLat">
+  <input type="hidden" id="houseLng" name="houseLng">
+</section>
 
 <label>บ้านเลขที่ เจ้าของสัตว์เลี้ยง</label>
 <input id="addrNo" required>
@@ -653,7 +800,6 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
     type="text"
     id="phone"
     maxlength="10"
-    pattern="\d{10}"
     required>
 
 <label>เบอร์โทรศัพท์บ้าน</label>
@@ -661,8 +807,7 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
 <input
     type="text"
     id="homePhone"
-    placeholder="เช่น 045-123456"
-    pattern="[0-9-]+">
+    placeholder="เช่น 045-123456">
 
 <label>
 สถานที่เลี้ยง <span style="color:red">*</span>
@@ -705,8 +850,13 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
 งานสัตวแพทย์ |
 045-246060 ต่อ 180 280
 </footer>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
+/* ตั้ง pattern ผ่าน JS (ห้ามใส่ {} หรือ [] ใน attribute ของ HTML ตรง ๆ เพราะ Perchance จะแปลเป็นโค้ด) */
+document.getElementById('citizenId').setAttribute('pattern', '\\d{13}');
+document.getElementById('phone').setAttribute('pattern', '\\d{10}');
+document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
+
 
 /* =====================================================
    GOOGLE APPS SCRIPT
@@ -888,6 +1038,9 @@ function openForm(center) {
 
     loadCommunities(center);
 
+    /* เตรียมแผนที่หลังเปิดหน้าแบบสำรวจ */
+    setTimeout(initHouseMap, 120);
+
     /* สำคัญ: เปลี่ยนหน้า */
     centerPage.classList.remove('page-visible');
     centerPage.classList.add('page-hidden');
@@ -953,6 +1106,281 @@ function loadCommunities(center) {
         select.appendChild(option);
     });
 }
+
+
+/* =====================================================
+   แผนที่บ้านสำรวจ: GPS + แตะเลือกจุด
+   หมายเหตุ: รายการหมุดในเวอร์ชันนี้เก็บใน localStorage
+   ของอุปกรณ์/เบราว์เซอร์ที่ใช้งาน
+===================================================== */
+let houseMap = null;
+let houseMarkersLayer = null;
+let housePickMode = false;
+let selectedHouseMarker = null;
+const HOUSE_MARKER_STORAGE = 'animalSurveyHouseMarkers_v1';
+const UBON_DEFAULT_CENTER = [15.2287, 104.8564];
+
+function getHouseMarkerRecords() {
+    try {
+        return JSON.parse(localStorage.getItem(HOUSE_MARKER_STORAGE) || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveHouseMarkerRecords(records) {
+    localStorage.setItem(HOUSE_MARKER_STORAGE, JSON.stringify(records));
+}
+
+function houseMarkerIcon(status) {
+    const color = status === 'surveyed' ? '#16a34a' : '#eab308';
+    return L.divIcon({
+        className: '',
+        html: '<div style="width:17px;height:17px;border-radius:50%;background:' + color +
+              ';border:3px solid white;box-shadow:0 1px 5px #333"></div>',
+        iconSize: [23, 23],
+        iconAnchor: [11, 11]
+    });
+}
+
+function initHouseMap() {
+    const el = document.getElementById('houseMap');
+    if (!el || typeof L === 'undefined') {
+        setHouseMapMessage('ไม่สามารถโหลดแผนที่ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+        return;
+    }
+    if (!houseMap) {
+        houseMap = L.map('houseMap', {
+            zoomControl: true,
+            preferCanvas: true,
+            scrollWheelZoom: true
+        }).setView(UBON_DEFAULT_CENTER, 17);
+        houseMap.attributionControl.setPrefix('© งานสัตวแพทย์ เทศบาลนครอุบลราชธานี');
+
+        // แผนที่ฐานรวมเป็นอันเดียว: ถนน 1 ชั้น (สลับแหล่งอัตโนมัติข้างใน) + ดาวเทียมไฮบริด 1 ชั้น
+        const streetSources = [
+            {
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+                subdomains: 'abc'
+            },
+            {
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: 'abc'
+            },
+            {
+                url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                subdomains: 'abcd'
+            }
+        ];
+        let streetSourceIndex = 0;
+        let streetErrorCount = 0;
+        const streetLayer = L.tileLayer(streetSources[0].url, {
+            minZoom: 3, maxNativeZoom: 19, maxZoom: 22,
+            keepBuffer: 3, updateWhenIdle: true, updateWhenZooming: false,
+            crossOrigin: true,
+            subdomains: streetSources[0].subdomains,
+            attribution: ''
+        });
+        streetLayer.on('tileerror', function () {
+            streetErrorCount++;
+            if (streetErrorCount >= 8 && streetSourceIndex < streetSources.length - 1) {
+                streetSourceIndex++;
+                streetLayer.options.subdomains = streetSources[streetSourceIndex].subdomains;
+                streetLayer.setUrl(streetSources[streetSourceIndex].url);
+                streetErrorCount = 0;
+                setHouseMapMessage('แผนที่บางส่วนโหลดไม่สำเร็จ กำลังเปลี่ยนแหล่งแผนที่ให้อัตโนมัติ');
+                setTimeout(function () { houseMap.invalidateSize(); }, 250);
+            }
+        });
+        streetLayer.on('load', function () {
+            streetErrorCount = 0;
+            setHouseMapMessage('แผนที่พร้อมใช้งาน');
+        });
+        const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            minZoom: 3,
+            maxNativeZoom: 19,
+            maxZoom: 22,
+            keepBuffer: 4,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            attribution: ''
+        });
+        const satelliteLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            minZoom: 3,
+            maxNativeZoom: 19,
+            maxZoom: 22,
+            keepBuffer: 4,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            attribution: '',
+            pane: 'overlayPane'
+        });
+        const satelliteHybrid = L.layerGroup([esriSatellite, satelliteLabels]);
+
+        streetLayer.addTo(houseMap);
+        L.control.layers({
+            'แผนที่ถนน': streetLayer,
+            'ดาวเทียม + ชื่อสถานที่': satelliteHybrid
+        }, null, {collapsed: window.innerWidth < 600, position: 'topright'}).addTo(houseMap);
+        L.control.scale({metric: true, imperial: false, position: 'bottomleft'}).addTo(houseMap);
+        const refreshTilesControl = L.control({position: 'bottomright'});
+        refreshTilesControl.onAdd = function () {
+            const button = L.DomUtil.create('button', 'leaflet-bar');
+            button.type = 'button';
+            button.title = 'โหลดภาพแผนที่ใหม่';
+            button.textContent = '↻ โหลดแผนที่ใหม่';
+            button.style.cssText = 'background:#fff;padding:7px 10px;border:0;border-radius:4px;font:13px Sarabun,sans-serif;cursor:pointer;';
+            L.DomEvent.disableClickPropagation(button);
+            L.DomEvent.on(button, 'click', function () {
+                streetErrorCount = 0;
+                streetLayer.redraw();
+                setHouseMapMessage('กำลังโหลดภาพแผนที่ใหม่…');
+            });
+            return button;
+        };
+        refreshTilesControl.addTo(houseMap);
+
+        houseMarkersLayer = L.layerGroup().addTo(houseMap);
+        houseMap.on('click', function(e) {
+            if (!housePickMode) return;
+            setSelectedHouseLocation(e.latlng.lat, e.latlng.lng, 'pending');
+            housePickMode = false;
+            setHouseMapMessage('ปักหมุดตำแหน่งบ้านแล้ว กรุณากรอกบ้านเลขที่และบันทึกแบบสำรวจ');
+        });
+    }
+    setTimeout(function() {
+        houseMap.invalidateSize();
+        showAllHouseMarkers();
+    }, 180);
+}
+
+function setHouseMapMessage(message) {
+    const el = document.getElementById('houseMapMessage');
+    if (el) el.textContent = message;
+}
+
+function setSelectedHouseLocation(lat, lng, status) {
+    document.getElementById('houseLat').value = Number(lat).toFixed(7);
+    document.getElementById('houseLng').value = Number(lng).toFixed(7);
+    document.getElementById('houseMapCoords').textContent =
+        'พิกัดที่เลือก: ' + Number(lat).toFixed(6) + ', ' + Number(lng).toFixed(6);
+    if (houseMap) {
+        if (selectedHouseMarker) houseMap.removeLayer(selectedHouseMarker);
+        selectedHouseMarker = L.marker([lat, lng], {icon: houseMarkerIcon(status || 'pending')})
+            .addTo(houseMap)
+            .bindPopup('ตำแหน่งบ้านที่เลือก');
+        houseMap.setView([lat, lng], Math.max(houseMap.getZoom(), 17));
+        selectedHouseMarker.openPopup();
+    }
+}
+
+function useCurrentGPS() {
+    if (!navigator.geolocation) {
+        setHouseMapMessage('อุปกรณ์นี้ไม่รองรับ GPS');
+        return;
+    }
+    setHouseMapMessage('กำลังค้นหาตำแหน่ง GPS…');
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setSelectedHouseLocation(lat, lng, 'pending');
+        setHouseMapMessage('รับพิกัด GPS แล้ว (ความคลาดเคลื่อนประมาณ ' +
+            Math.round(pos.coords.accuracy) + ' เมตร) ตรวจสอบหมุดให้ตรงบ้านก่อนบันทึก');
+    }, function(err) {
+        const messages = {
+            1: 'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง กรุณาอนุญาต Location ในเบราว์เซอร์',
+            2: 'ไม่พบตำแหน่ง GPS กรุณาลองอีกครั้งหรือแตะเลือกบนแผนที่',
+            3: 'ค้นหา GPS นานเกินไป กรุณาลองอีกครั้ง'
+        };
+        setHouseMapMessage(messages[err.code] || 'ไม่สามารถอ่าน GPS ได้');
+    }, {enableHighAccuracy: true, timeout: 20000, maximumAge: 0});
+}
+
+function enableMapPick() {
+    if (!houseMap) initHouseMap();
+    housePickMode = true;
+    setHouseMapMessage('โหมดเลือกจุด: แตะตำแหน่งบ้านบนแผนที่');
+}
+
+function showAllHouseMarkers() {
+    if (!houseMap || !houseMarkersLayer) return;
+    houseMarkersLayer.clearLayers();
+    const center = document.getElementById('centerId')?.value || '';
+    const community = document.getElementById('communitySelect')?.value || '';
+    const records = getHouseMarkerRecords().filter(function(r) {
+        return (!center || String(r.centerId) === String(center)) &&
+               (!community || r.community === community);
+    });
+    records.forEach(function(r) {
+        if (!Number.isFinite(Number(r.lat)) || !Number.isFinite(Number(r.lng))) return;
+        const marker = L.marker([Number(r.lat), Number(r.lng)], {
+            icon: houseMarkerIcon(r.status)
+        }).addTo(houseMarkersLayer);
+        marker.bindPopup(
+            '<b>บ้านเลขที่: </b>' + escapeHouseMapText(r.addrNo || '-') +
+            '<br><b>ชุมชน: </b>' + escapeHouseMapText(r.community || '-') +
+            '<br><b>สถานะ: </b>' + (r.status === 'surveyed' ? 'สำรวจแล้ว' : 'ยังไม่ได้สำรวจ')
+        );
+    });
+    setHouseMapMessage('แสดงหมุด ' + records.length + ' หลังในชุมชนที่เลือก (ข้อมูลที่บันทึกในอุปกรณ์นี้)');
+}
+
+function escapeHouseMapText(value) {
+    return String(value).replace(/[&<>"']/g, function(ch) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+    });
+}
+
+function savePendingHouseMarker() {
+    const lat = document.getElementById('houseLat').value;
+    const lng = document.getElementById('houseLng').value;
+    const addrNo = document.getElementById('addrNo').value.trim();
+    const community = document.getElementById('communitySelect').value;
+    if (!community) { setHouseMapMessage('กรุณาเลือกชุมชนก่อนบันทึกหมุด'); return; }
+    if (!addrNo) { setHouseMapMessage('กรุณากรอกบ้านเลขที่ก่อนบันทึกหมุด'); return; }
+    if (!lat || !lng) { setHouseMapMessage('กรุณาใช้ GPS หรือแตะเลือกตำแหน่งบนแผนที่ก่อน'); return; }
+    rememberHouseMarker('pending');
+    setHouseMapMessage('บันทึกหมุดบ้านเลขที่ ' + addrNo + ' เป็นสถานะยังไม่ได้สำรวจแล้ว');
+}
+
+function rememberHouseMarker(status) {
+    const lat = Number(document.getElementById('houseLat').value);
+    const lng = Number(document.getElementById('houseLng').value);
+    const addrNo = document.getElementById('addrNo').value.trim();
+    const centerId = document.getElementById('centerId').value;
+    const community = document.getElementById('communitySelect').value;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !addrNo || !community) return;
+
+    const records = getHouseMarkerRecords();
+    const key = [centerId, community, addrNo].join('|');
+    const record = {
+        key: key, centerId: centerId, community: community, addrNo: addrNo,
+        lat: lat, lng: lng, status: status, updatedAt: new Date().toISOString()
+    };
+    const index = records.findIndex(function(r) { return r.key === key; });
+    if (index >= 0) records[index] = record;
+    else records.push(record);
+    saveHouseMarkerRecords(records);
+    if (houseMap) showAllHouseMarkers();
+}
+
+document.getElementById('communitySelect').addEventListener('change', function() {
+    if (houseMap) showAllHouseMarkers();
+});
+document.getElementById('addrNo').addEventListener('change', function() {
+    const addrNo = this.value.trim();
+    const centerId = document.getElementById('centerId').value;
+    const community = document.getElementById('communitySelect').value;
+    const found = getHouseMarkerRecords().find(function(r) {
+        return String(r.centerId) === String(centerId) &&
+               r.community === community && r.addrNo === addrNo;
+    });
+    if (found) {
+        setSelectedHouseLocation(found.lat, found.lng, found.status);
+        setHouseMapMessage(found.status === 'surveyed' ?
+            'บ้านหลังนี้มีข้อมูลสำรวจแล้ว' : 'พบหมุดบ้านหลังนี้ แต่ยังไม่ได้สำรวจ');
+    }
+});
 
 
 /* =====================================================
@@ -1953,6 +2381,12 @@ document
                     ).value
             },
 
+            houseLocation: {
+                latitude: document.getElementById('houseLat').value,
+                longitude: document.getElementById('houseLng').value,
+                status: 'surveyed'
+            },
+
             ownerPhotoBase64:
                 ownerBase64,
 
@@ -1996,6 +2430,9 @@ document
                 result.status ===
                 'success'
             ) {
+
+                /* เปลี่ยนสถานะบ้านเป็นสำรวจแล้วในรายการหมุดของอุปกรณ์นี้ */
+                rememberHouseMarker('surveyed');
 
                 document.getElementById(
                     'status'
@@ -2192,6 +2629,7 @@ function compressImage(
         }
     );
 }
+
 
 </script>
 
