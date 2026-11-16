@@ -864,7 +864,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbwQ_qUvLgXg3mooFwDKZ7hYLZ18D93hkX8t-d4oSINwBAEdXrEXhTYuCM23YlQP92eQ/exec";
+"https://script.google.com/macros/s/AKfycbxIm_h0jl9Z3t2U1qmVVtu6qlTFrTTYP-1tFtfewFCxKGTNMaaX4hzxsFsixhYhBJSk/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -1118,6 +1118,7 @@ let houseMap = null;
 let houseMarkersLayer = null;
 let housePickMode = false;
 let selectedHouseMarker = null;
+let selectedHouseKey = null;
 const HOUSE_MARKER_STORAGE = 'animalSurveyHouseMarkers_v1';
 const UBON_DEFAULT_CENTER = [15.2287, 104.8564];
 
@@ -1244,6 +1245,10 @@ function initHouseMap() {
         houseMarkersLayer = L.layerGroup().addTo(houseMap);
         houseMap.on('click', function(e) {
             if (!housePickMode) return;
+            if (e.originalEvent && e.originalEvent.target &&
+                e.originalEvent.target.closest &&
+                e.originalEvent.target.closest('.leaflet-marker-icon')) return;
+            selectedHouseKey = null;
             setSelectedHouseLocation(e.latlng.lat, e.latlng.lng, 'pending');
             housePickMode = false;
             setHouseMapMessage('ปักหมุดตำแหน่งบ้านแล้ว กรุณากรอกบ้านเลขที่และบันทึกแบบสำรวจ');
@@ -1322,6 +1327,19 @@ function showAllHouseMarkers() {
             '<br><b>ชุมชน: </b>' + escapeHouseMapText(r.community || '-') +
             '<br><b>สถานะ: </b>' + (r.status === 'surveyed' ? 'สำรวจแล้ว' : 'ยังไม่ได้สำรวจ')
         );
+        marker.on('click', function() {
+            selectedHouseKey = r.key;
+            document.getElementById('addrNo').value = r.addrNo || '';
+            const commSel = document.getElementById('communitySelect');
+            if (r.community && commSel.querySelector('option[value="' + r.community + '"]')) {
+                commSel.value = r.community;
+            }
+            document.getElementById('houseLat').value = r.lat;
+            document.getElementById('houseLng').value = r.lng;
+            document.getElementById('houseMapCoords').textContent =
+                'พิกัดที่เลือก: ' + Number(r.lat).toFixed(6) + ', ' + Number(r.lng).toFixed(6);
+            setHouseMapMessage('เลือกหมุดบ้านเลขที่ ' + (r.addrNo || '-') + ' แล้ว กดปุ่มลบแล้วใส่รหัสเพื่อลบหมุดนี้');
+        });
     });
     setHouseMapMessage('แสดงหมุด ' + records.length + ' หลังในชุมชนที่เลือก (ข้อมูลที่บันทึกในอุปกรณ์นี้)');
 }
@@ -1344,38 +1362,78 @@ function savePendingHouseMarker() {
     setHouseMapMessage('บันทึกหมุดบ้านเลขที่ ' + addrNo + ' เป็นสถานะยังไม่ได้สำรวจแล้ว');
 }
 
-function deleteSelectedHouseMarker() {
-    const addrNo = document.getElementById('addrNo').value.trim();
+async function deleteSelectedHouseMarker() {
     const centerId = document.getElementById('centerId').value;
-    const community = document.getElementById('communitySelect').value;
-    if (!community) { setHouseMapMessage('กรุณาเลือกชุมชนก่อนลบหมุด'); return; }
-    if (!addrNo) { setHouseMapMessage('กรุณากรอกบ้านเลขที่ของหมุดที่ต้องการลบ'); return; }
+    const centerName = document.getElementById('centerName').value;
+    const communitySel = document.getElementById('communitySelect').value;
     const records = getHouseMarkerRecords();
-    const key = [centerId, community, addrNo].join('|');
+    let key = selectedHouseKey;
+    let addrNo = '';
+    let targetCommunity = communitySel;
+    if (key) {
+        const found = records.filter(function(r) { return r.key === key; })[0];
+        if (!found) {
+            selectedHouseKey = null;
+            key = '';
+        } else {
+            addrNo = found.addrNo;
+            targetCommunity = found.community;
+        }
+    }
+    if (!key) {
+        if (!communitySel) { setHouseMapMessage('แตะเลือกหมุดบนแผนที่ หรือเลือกชุมชนแล้วกรอกบ้านเลขที่'); return; }
+        addrNo = document.getElementById('addrNo').value.trim();
+        if (!addrNo) { setHouseMapMessage('แตะเลือกหมุดบนแผนที่ หรือกรอกบ้านเลขที่ของหมุดที่ต้องการลบ'); return; }
+        key = [centerId, communitySel, addrNo].join('|');
+        targetCommunity = communitySel;
+    }
     const kept = records.filter(function(r) { return r.key !== key; });
     if (kept.length === records.length) {
         setHouseMapMessage('ไม่พบหมุดบ้านเลขที่ ' + addrNo + ' ในชุมชนนี้ (อาจยังไม่ได้บันทึกหมุด)');
         return;
     }
-    const passcode = prompt('กรุณาใส่รหัสยืนยันเพื่อลบหมุดบ้านเลขที่ ' + addrNo);
+    const passcode = prompt('กรุณาใส่รหัสยืนยันเพื่อลบข้อมูลบ้านเลขที่ ' + addrNo + '\n(ลบทั้งหมุดบนแผนที่และข้อมูลในชีต)');
     if (passcode === null) return;
     if (passcode.trim() !== 'babydog4321') {
         setHouseMapMessage('รหัสไม่ถูกต้อง ไม่สามารถลบหมุดได้');
         return;
     }
-    saveHouseMarkerRecords(kept);
-    if (selectedHouseMarker && houseMap) {
-        houseMap.removeLayer(selectedHouseMarker);
-        selectedHouseMarker = null;
+    setHouseMapMessage('กำลังลบข้อมูลบ้านเลขที่ ' + addrNo + ' ในชีต...');
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'deleteHouse',
+                passcode: passcode.trim(),
+                centerName: centerName,
+                community: targetCommunity,
+                addrNo: addrNo
+            })
+        });
+        const result = JSON.parse(await res.text());
+        if (result.status !== 'success') {
+            setHouseMapMessage('ลบในชีตไม่สำเร็จ: ' + (result.message || 'ไม่ทราบสาเหตุ') + ' (หมุดยังอยู่)');
+            return;
+        }
+        saveHouseMarkerRecords(kept);
+        if (selectedHouseMarker && houseMap) {
+            houseMap.removeLayer(selectedHouseMarker);
+            selectedHouseMarker = null;
+        }
+        document.getElementById('houseLat').value = '';
+        document.getElementById('houseLng').value = '';
+        document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
+        selectedHouseKey = null;
+        showAllHouseMarkers();
+        setHouseMapMessage('✅ ' + result.message);
+    } catch (err) {
+        console.error(err);
+        setHouseMapMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ หมุดและข้อมูลยังอยู่ กรุณาลองใหม่');
     }
-    document.getElementById('houseLat').value = '';
-    document.getElementById('houseLng').value = '';
-    document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
-    showAllHouseMarkers();
-    setHouseMapMessage('ลบหมุดบ้านเลขที่ ' + addrNo + ' แล้ว');
 }
 
-function rememberHouseMarker(status) {    const lat = Number(document.getElementById('houseLat').value);
+function rememberHouseMarker(status) {
+    const lat = Number(document.getElementById('houseLat').value);
     const lng = Number(document.getElementById('houseLng').value);
     const addrNo = document.getElementById('addrNo').value.trim();
     const centerId = document.getElementById('centerId').value;
