@@ -467,11 +467,102 @@ button { min-height: 42px; touch-action: manipulation; }
 
 /* ===== Detailed map controls ===== */
 #houseMap { min-height: 340px; background: #e8edf3; }
-#houseMap .leaflet-control-layers { border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.18); font-size: 13px; }
-#houseMap .leaflet-control-layers-expanded { padding: 9px 11px; }
-#houseMap .leaflet-control-zoom a { width: 34px; height: 34px; line-height: 34px; }
+#houseMap .leaflet-control { font-family: var(--body); }
+#houseMap .leaflet-top.leaflet-right { margin-top: 12px; margin-right: 12px; }
+#houseMap .leaflet-bottom.leaflet-right {
+  margin-right: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+#houseMap .basemap-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(44,62,144,.16);
+  border-radius: 999px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 12px 28px rgba(28,37,64,.18);
+  backdrop-filter: blur(10px);
+}
+#houseMap .basemap-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 9px 15px;
+  color: var(--muted);
+  font: 600 13px var(--body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+#houseMap .basemap-option::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .55;
+}
+#houseMap .basemap-option:hover { background: var(--field); color: var(--brand-deep); }
+#houseMap .basemap-option.is-active {
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(44,62,144,.30);
+}
+#houseMap .basemap-option.is-active::before { background: #ffd97a; opacity: 1; }
+#houseMap .leaflet-control-zoom {
+  overflow: hidden;
+  border: 1px solid rgba(44,62,144,.16);
+  border-radius: 14px;
+  box-shadow: 0 10px 22px rgba(28,37,64,.16);
+}
+#houseMap .leaflet-control-zoom a {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  color: var(--brand-deep);
+  background: rgba(255,255,255,.96);
+}
+#houseMap .leaflet-control-zoom a:hover { background: var(--field); color: var(--brand); }
+#houseMap .leaflet-control-scale-line {
+  padding: 4px 11px;
+  border: 1px solid rgba(255,255,255,.65);
+  border-radius: 999px;
+  background: rgba(28,37,64,.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(28,37,64,.20);
+}
+#houseMap button.leaflet-bar.leaflet-control {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep)) !important;
+  color: #fff !important;
+  font: 600 13px var(--body) !important;
+  padding: 10px 15px !important;
+  box-shadow: 0 10px 20px rgba(44,62,144,.30);
+  cursor: pointer;
+}
+#houseMap button.leaflet-bar.leaflet-control:hover { filter: brightness(1.07); }
+#houseMap .leaflet-control-attribution {
+  background: rgba(255,255,255,.88) !important;
+  border-radius: 999px;
+  padding: 4px 11px;
+  color: var(--muted);
+  font-size: 11px;
+  box-shadow: 0 6px 14px rgba(28,37,64,.12);
+  backdrop-filter: blur(8px);
+}
+#houseMap .leaflet-control-attribution a { color: var(--brand); font-weight: 600; }
 @media (min-width: 1100px) { #houseMap { height: min(68vh, 650px); } }
-@media (max-width: 600px) { #houseMap { height: min(62vh, 480px); min-height: 320px; } #houseMap .leaflet-control-layers { max-width: 190px; } }
+@media (max-width: 600px) { #houseMap { height: min(62vh, 480px); min-height: 320px; } }
 
 /* ===== รวมแผนที่ให้เป็นผืนเดียว: กัน tile แยกเป็นชิ้น + ล็อกขนาดกรอบ ===== */
 #houseMap img.leaflet-tile { max-width: none !important; }
@@ -1220,10 +1311,33 @@ function initHouseMap() {
         const satelliteHybrid = L.layerGroup([esriSatellite, satelliteLabels]);
 
         streetLayer.addTo(houseMap);
-        L.control.layers({
-            'แผนที่ถนน': streetLayer,
-            'ดาวเทียม + ชื่อสถานที่': satelliteHybrid
-        }, null, {collapsed: window.innerWidth < 600, position: 'topright'}).addTo(houseMap);
+        const basemapControl = L.control({position: 'topright'});
+        basemapControl.onAdd = function () {
+            const wrap = L.DomUtil.create('div', 'basemap-switch');
+            const streetBtn = L.DomUtil.create('button', 'basemap-option is-active', wrap);
+            streetBtn.type = 'button';
+            streetBtn.textContent = 'แผนที่ถนน';
+            const satelliteBtn = L.DomUtil.create('button', 'basemap-option', wrap);
+            satelliteBtn.type = 'button';
+            satelliteBtn.textContent = 'ดาวเทียม + ชื่อสถานที่';
+            function setBasemap(which) {
+                const streetActive = which === 'street';
+                streetBtn.classList.toggle('is-active', streetActive);
+                satelliteBtn.classList.toggle('is-active', !streetActive);
+                if (streetActive) {
+                    if (!houseMap.hasLayer(streetLayer)) streetLayer.addTo(houseMap);
+                    if (houseMap.hasLayer(satelliteHybrid)) houseMap.removeLayer(satelliteHybrid);
+                } else {
+                    if (!houseMap.hasLayer(satelliteHybrid)) satelliteHybrid.addTo(houseMap);
+                    if (houseMap.hasLayer(streetLayer)) houseMap.removeLayer(streetLayer);
+                }
+            }
+            L.DomEvent.disableClickPropagation(wrap);
+            L.DomEvent.on(streetBtn, 'click', function () { setBasemap('street'); });
+            L.DomEvent.on(satelliteBtn, 'click', function () { setBasemap('satellite'); });
+            return wrap;
+        };
+        basemapControl.addTo(houseMap);
         L.control.scale({metric: true, imperial: false, position: 'bottomleft'}).addTo(houseMap);
         const refreshTilesControl = L.control({position: 'bottomright'});
         refreshTilesControl.onAdd = function () {
