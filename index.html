@@ -746,6 +746,7 @@ button { min-height: 42px; touch-action: manipulation; }
     <button type="button" class="secondary" onclick="enableMapPick()">แตะเลือกจุดบนแผนที่</button>
     <button type="button" class="secondary" onclick="savePendingHouseMarker()">บันทึกหมุดบ้าน (ยังไม่ได้สำรวจ)</button>
     <button type="button" class="secondary" onclick="showAllHouseMarkers()">แสดงบ้านทั้งหมด</button>
+    <button type="button" class="secondary" onclick="deleteSelectedHouseMarker()" style="background:#a33">ลบหมุดบ้านหลังนี้</button>
   </div>
   <div class="house-map-legend">
     <span><i class="house-dot done"></i> สำรวจแล้ว</span>
@@ -1343,8 +1344,38 @@ function savePendingHouseMarker() {
     setHouseMapMessage('บันทึกหมุดบ้านเลขที่ ' + addrNo + ' เป็นสถานะยังไม่ได้สำรวจแล้ว');
 }
 
-function rememberHouseMarker(status) {
-    const lat = Number(document.getElementById('houseLat').value);
+function deleteSelectedHouseMarker() {
+    const addrNo = document.getElementById('addrNo').value.trim();
+    const centerId = document.getElementById('centerId').value;
+    const community = document.getElementById('communitySelect').value;
+    if (!community) { setHouseMapMessage('กรุณาเลือกชุมชนก่อนลบหมุด'); return; }
+    if (!addrNo) { setHouseMapMessage('กรุณากรอกบ้านเลขที่ของหมุดที่ต้องการลบ'); return; }
+    const records = getHouseMarkerRecords();
+    const key = [centerId, community, addrNo].join('|');
+    const kept = records.filter(function(r) { return r.key !== key; });
+    if (kept.length === records.length) {
+        setHouseMapMessage('ไม่พบหมุดบ้านเลขที่ ' + addrNo + ' ในชุมชนนี้ (อาจยังไม่ได้บันทึกหมุด)');
+        return;
+    }
+    const passcode = prompt('กรุณาใส่รหัสยืนยันเพื่อลบหมุดบ้านเลขที่ ' + addrNo);
+    if (passcode === null) return;
+    if (passcode.trim() !== 'babydog4321') {
+        setHouseMapMessage('รหัสไม่ถูกต้อง ไม่สามารถลบหมุดได้');
+        return;
+    }
+    saveHouseMarkerRecords(kept);
+    if (selectedHouseMarker && houseMap) {
+        houseMap.removeLayer(selectedHouseMarker);
+        selectedHouseMarker = null;
+    }
+    document.getElementById('houseLat').value = '';
+    document.getElementById('houseLng').value = '';
+    document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
+    showAllHouseMarkers();
+    setHouseMapMessage('ลบหมุดบ้านเลขที่ ' + addrNo + ' แล้ว');
+}
+
+function rememberHouseMarker(status) {    const lat = Number(document.getElementById('houseLat').value);
     const lng = Number(document.getElementById('houseLng').value);
     const addrNo = document.getElementById('addrNo').value.trim();
     const centerId = document.getElementById('centerId').value;
