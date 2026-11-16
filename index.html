@@ -2469,10 +2469,14 @@ document
                 document.getElementById(
                     'status'
                 ).innerText =
-                    '✅ บันทึกข้อมูลลง Google Sheet เรียบร้อย';
+                    '✅ ' + (
+                        result.message ||
+                        'บันทึกข้อมูลลง Google Sheet เรียบร้อย'
+                    );
 
 
                 alert(
+                    result.message ||
                     'บันทึกข้อมูลเรียบร้อยแล้ว'
                 );
 
