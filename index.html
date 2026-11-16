@@ -1260,8 +1260,8 @@ function setHouseMapMessage(message) {
 }
 
 function setSelectedHouseLocation(lat, lng, status) {
-    document.getElementById('houseLat').value = Number(lat).toFixed(7);
-    document.getElementById('houseLng').value = Number(lng).toFixed(7);
+    document.getElementById('houseLat').value = String(parseFloat(Number(lat).toFixed(7)));
+    document.getElementById('houseLng').value = String(parseFloat(Number(lng).toFixed(7)));
     document.getElementById('houseMapCoords').textContent =
         'พิกัดที่เลือก: ' + Number(lat).toFixed(6) + ', ' + Number(lng).toFixed(6);
     if (houseMap) {
@@ -1961,6 +1961,38 @@ document
             );
 
             citizen.focus();
+            return;
+        }
+
+
+        /* ===============================
+           ตำแหน่งบ้านที่สำรวจ (บังคับ)
+        =============================== */
+
+        const houseLatVal =
+            document.getElementById('houseLat').value;
+
+        const houseLngVal =
+            document.getElementById('houseLng').value;
+
+        if (
+            !houseLatVal || !houseLngVal ||
+            !Number.isFinite(Number(houseLatVal)) ||
+            !Number.isFinite(Number(houseLngVal))
+        ) {
+
+            alert(
+                'กรุณาเลือกตำแหน่งบ้านที่สำรวจก่อนบันทึก ' +
+                '(กดใช้ GPS หรือแตะเลือกจุดบนแผนที่)'
+            );
+
+            document.getElementById('houseMap')
+                .scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+            enableMapPick();
             return;
         }
 
