@@ -567,6 +567,22 @@ button { min-height: 42px; touch-action: manipulation; }
 /* ===== รวมแผนที่ให้เป็นผืนเดียว: กัน tile แยกเป็นชิ้น + ล็อกขนาดกรอบ ===== */
 #houseMap img.leaflet-tile { max-width: none !important; }
 
+/* ===== หน้าค้นหา/แก้ไข + กล่องขาออก ===== */
+#searchPage { display: none; }
+#searchPage.page-hidden { display: none !important; }
+#searchPage.page-visible { display: block !important; }
+.center-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+.center-actions .page-button { border: 1.5px solid var(--line); background: #fff; color: var(--brand-deep); }
+.center-actions .page-button:hover { border-color: var(--brand); background: var(--field); }
+.edit-banner { margin: 14px 0 0; padding: 12px 14px; border-radius: 10px; background: #fff8e6; border: 1px solid #ecd27a; font-weight: 700; color: #7a5b00; }
+.search-panel { margin: 18px 0; padding: 16px; background: #f7f9ff; border: 1px solid var(--line); border-radius: 14px; }
+.search-panel h3 { margin-top: 0; color: var(--brand-deep); }
+.search-results { display: grid; gap: 8px; margin-top: 10px; }
+.search-result-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.outbox-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; font-size: 14px; }
+.mini-button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.mini-button.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+.mini-button.danger { background: #a33; color: #fff; border-color: #a33; }
 </style>
 </head>
 <body>
@@ -667,6 +683,15 @@ button { min-height: 42px; touch-action: manipulation; }
     </button>
 </div>
 
+<div class="center-actions">
+    <button type="button" class="page-button" onclick="openSearch()">
+        🔍 ค้นหา / แก้ไขข้อมูล
+    </button>
+    <button type="button" class="page-button" onclick="openSearch()">
+        📥 กล่องขาออก (<span data-outbox-count>0</span>)
+    </button>
+</div>
+
 </div>
 </main>
 </div>
@@ -687,6 +712,10 @@ button { min-height: 42px; touch-action: manipulation; }
 </button>
 
 <h2>แบบฟอร์มสำรวจสัตว์</h2>
+
+<div id="editBanner" class="edit-banner" hidden>
+✏️ <span id="editBannerText"></span>
+</div>
 
 <p
     id="centerLabel"
@@ -925,13 +954,60 @@ button { min-height: 42px; touch-action: manipulation; }
 
 </select>
 
-<button type="submit" class="save-button">
+<button type="submit" class="save-button" id="saveButton">
 บันทึกข้อมูล
 </button>
 
 </form>
 
 <p id="status" class="status"></p>
+
+</main>
+</div>
+
+<div id="searchPage" class="page-hidden">
+
+<main>
+
+<button
+    type="button"
+    class="page-button back-button"
+    onclick="backToCenter()">
+    ← กลับ
+</button>
+
+<h2>ค้นหา / แก้ไขข้อมูล</h2>
+
+<section class="search-panel" aria-label="กล่องขาออก">
+<h3>📥 กล่องขาออก (<span data-outbox-count>0</span> รายการ)</h3>
+<p class="house-map-help">บันทึกตอนไม่มีเน็ตจะถูกเก็บไว้ที่นี่ กลับมามีเน็ตแล้วกดส่ง หรือระบบจะส่งให้อัตโนมัติ</p>
+<div class="house-map-actions">
+<button type="button" onclick="syncOutbox()">ส่งรายการค้างทั้งหมดตอนนี้</button>
+</div>
+<p id="outboxMsg" class="house-map-message"></p>
+<div id="outboxList"></div>
+</section>
+
+<section class="search-panel" aria-label="ค้นหาบ้าน">
+<h3>🔍 ค้นหาบ้านที่สำรวจแล้ว</h3>
+
+<label>ศูนย์บริการ</label>
+<select id="searchCenter"></select>
+
+<label>ชุมชน</label>
+<select id="searchCommunity"></select>
+
+<label>บ้านเลขที่</label>
+<input id="searchAddrNo" placeholder="เช่น 123/4">
+
+<div class="house-map-actions">
+<button type="button" class="secondary" onclick="searchLocalHouses()">ค้นหาในเครื่องนี้</button>
+<button type="button" onclick="loadHouseFromServer()">โหลดจากเซิร์ฟเวอร์</button>
+</div>
+
+<p id="searchMsg" class="house-map-message"></p>
+<div id="searchResults" class="search-results"></div>
+</section>
 
 </main>
 </div>
@@ -1134,6 +1210,9 @@ function openForm(center) {
     setTimeout(initHouseMap, 120);
 
     /* สำคัญ: เปลี่ยนหน้า */
+    if (typeof exitEditMode === 'function') exitEditMode();
+    var __searchPageEl = document.getElementById('searchPage');
+    if (__searchPageEl) { __searchPageEl.classList.remove('page-visible'); __searchPageEl.classList.add('page-hidden'); }
     centerPage.classList.remove('page-visible');
     centerPage.classList.add('page-hidden');
 
@@ -1158,6 +1237,9 @@ function backToCenter() {
         document.getElementById('formPage');
 
     // ซ่อนหน้าแบบสำรวจ
+    if (typeof exitEditMode === 'function') exitEditMode();
+    var __searchPageEl2 = document.getElementById('searchPage');
+    if (__searchPageEl2) { __searchPageEl2.classList.remove('page-visible'); __searchPageEl2.classList.add('page-hidden'); }
     formPage.classList.remove('page-visible');
     formPage.classList.add('page-hidden');
 
@@ -2106,6 +2188,14 @@ document
 
         e.preventDefault();
 
+        /* กันกรอกซ้ำ + เตรียมโหมดแก้ไข */
+        if (!window.__surveyEdit && typeof checkDuplicateHouse === 'function') {
+            const __dupMsg = checkDuplicateHouse();
+            if (__dupMsg) {
+                if (!confirm(__dupMsg + '\n\nกด OK เพื่อบันทึกทับ หรือ Cancel เพื่อยกเลิก')) return;
+            }
+        }
+
         /* ===============================
            ผู้สำรวจ
         =============================== */
@@ -2473,8 +2563,10 @@ document
         =============================== */
 
         const ownerBase64 =
-            await readFile(
-                ownerPhoto.files[0]
+            await compressImage(
+                ownerPhoto.files[0],
+                1024,
+                0.8
             );
 
 
@@ -2625,6 +2717,12 @@ document
                 pets
         };
 
+        /* โหมดแก้ไข: ส่งแบบ update + แนบรูปเดิมที่ไม่ได้เปลี่ยน */
+        if (window.__surveyEdit) {
+            payload.action = 'updateHouse';
+            payload.existingPhotos = window.__surveyEdit.existingPhotos || null;
+        }
+
 
         /* ===============================
            ส่งข้อมูล
@@ -2664,15 +2762,19 @@ document
 
                 /* เปลี่ยนสถานะบ้านเป็นสำรวจแล้วในรายการหมุดของอุปกรณ์นี้ */
                 rememberHouseMarker('surveyed');
+                if (typeof cacheSurveyRecord === 'function') {
+                    cacheSurveyRecord(payload);
+                    refreshRecordCache(payload);
+                }
 
                 document.getElementById(
                     'status'
                 ).innerText =
-                    'บันทึกข้อมูลสำเร็จ';
+                    window.__surveyEdit ? 'แก้ไขข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ';
 
 
                 alert(
-                    'บันทึกข้อมูลสำเร็จ'
+                    window.__surveyEdit ? 'แก้ไขข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ'
                 );
 
 
@@ -2686,6 +2788,8 @@ document
 
                 ownerPreview.style.display =
                     'none';
+
+                if (typeof exitEditMode === 'function') exitEditMode();
 
 
                 /* ===============================
@@ -2744,10 +2848,22 @@ document
 
             console.error(err);
 
+            /* ส่งไม่ติด (เน็ตหลุด) → เก็บลงกล่องขาออก ส่งแบบ updateHouse ตอนมีเน็ตกันแถวซ้ำ */
+            let __queued = false;
+            try {
+                if (typeof queueOfflineRecord === 'function') {
+                    payload.action = 'updateHouse';
+                    __queued = queueOfflineRecord(payload);
+                    if (typeof updateOutboxBadge === 'function') updateOutboxBadge();
+                }
+            } catch (qErr) { __queued = false; }
+
             document.getElementById(
                 'status'
             ).innerText =
-                '❌ ไม่สามารถเชื่อมต่อ Google Script';
+                __queued
+                    ? '📥 เน็ตไม่พร้อม เก็บลงกล่องขาออกแล้ว (' + outboxCount() + ' รายการ) กลับมามีเน็ตแล้วกดส่งที่หน้าค้นหา / แก้ไขข้อมูล'
+                    : '❌ ไม่สามารถเชื่อมต่อ Google Script';
         }
 
     }
@@ -2861,6 +2977,443 @@ function compressImage(
     );
 }
 
+
+/* =====================================================
+   ฟีเจอร์เสริม: กล่องขาออก (offline) / กันกรอกซ้ำ / ค้นหา-แก้ไข
+===================================================== */
+
+const OUTBOX_KEY = 'animalSurveyOutbox_v1';
+const RECORD_CACHE_KEY = 'animalSurveyCache_v1';
+
+/* ---------- เปลี่ยนหน้า ---------- */
+
+function showPage(name) {
+    ['centerPage', 'formPage', 'searchPage'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (id === name) {
+            el.classList.remove('page-hidden');
+            el.classList.add('page-visible');
+        } else {
+            el.classList.remove('page-visible');
+            el.classList.add('page-hidden');
+        }
+    });
+}
+
+function openSearch() {
+    initSearchCenters();
+    updateOutboxBadge();
+    renderOutboxList();
+    outboxMsg('');
+    setSearchMsg('');
+    showPage('searchPage');
+    window.scrollTo(0, 0);
+}
+
+/* ---------- กล่องขาออก ---------- */
+
+function loadOutbox() {
+    try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); }
+    catch (e) { return []; }
+}
+
+function saveOutbox(list) {
+    try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(list)); return true; }
+    catch (e) { return false; }
+}
+
+function outboxCount() { return loadOutbox().length; }
+
+function updateOutboxBadge() {
+    const n = outboxCount();
+    document.querySelectorAll('[data-outbox-count]').forEach(function(el) { el.textContent = n; });
+}
+
+function houseKeyOf(centerId, community, addrNo) {
+    return [(centerId || ''), (community || ''), ((addrNo || '').trim())].join('|');
+}
+
+function queueOfflineRecord(payload) {
+    const box = loadOutbox();
+    box.push({payload: payload, queuedAt: new Date().toISOString()});
+    const ok = saveOutbox(box);
+    updateOutboxBadge();
+    return ok;
+}
+
+function removeOutboxItem(i) {
+    const box = loadOutbox();
+    box.splice(i, 1);
+    saveOutbox(box);
+    updateOutboxBadge();
+    renderOutboxList();
+}
+
+function outboxMsg(t) {
+    const el = document.getElementById('outboxMsg');
+    if (el) el.textContent = t;
+}
+
+function renderOutboxList() {
+    const list = document.getElementById('outboxList');
+    if (!list) return;
+    const box = loadOutbox();
+    if (!box.length) {
+        list.innerHTML = '<p class="house-map-help">ยังไม่มีรายการค้างส่ง</p>';
+        return;
+    }
+    list.innerHTML = '';
+    box.forEach(function(item, i) {
+        const p = item.payload || {};
+        const addr = (p.address && p.address.addrNo) || '-';
+        const div = document.createElement('div');
+        div.className = 'outbox-item';
+        const label = document.createElement('span');
+        let when = '';
+        try { when = new Date(item.queuedAt).toLocaleString('th-TH'); } catch (e) {}
+        label.textContent = (p.community || '-') + ' บ้านเลขที่ ' + addr + ' (' + when + ')';
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'mini-button danger';
+        del.textContent = 'ลบ';
+        del.onclick = function() { removeOutboxItem(i); };
+        div.appendChild(label);
+        div.appendChild(del);
+        list.appendChild(div);
+    });
+}
+
+async function syncOutbox() {
+    const box = loadOutbox();
+    if (!box.length) { outboxMsg('ไม่มีรายการค้างส่ง'); return; }
+    outboxMsg('กำลังส่ง ' + box.length + ' รายการ…');
+    const remain = [];
+    for (const item of box) {
+        try {
+            /* ส่งแบบ updateHouse ทำให้ส่งซ้ำไม่เกิดแถวเบิ้ล */
+            item.payload.action = 'updateHouse';
+            const res = await fetch(GAS_URL, {method: 'POST', body: JSON.stringify(item.payload)});
+            const result = JSON.parse(await res.text());
+            if (result.status !== 'success') { remain.push(item); }
+            else {
+                markHouseSurveyedByPayload(item.payload);
+                cacheSurveyRecord(item.payload);
+                refreshRecordCache(item.payload);
+            }
+        } catch (e) { remain.push(item); break; }
+    }
+    saveOutbox(remain);
+    updateOutboxBadge();
+    renderOutboxList();
+    outboxMsg(remain.length ? 'ส่งได้บางส่วน เหลือค้าง ' + remain.length + ' รายการ' : 'ส่งครบทุกรายการแล้ว ✅');
+}
+
+function markHouseSurveyedByPayload(p) {
+    try {
+        const addrNo = (p.address && p.address.addrNo || '').trim();
+        const key = houseKeyOf(p.centerId, p.community, addrNo);
+        const records = getHouseMarkerRecords();
+        const idx = records.findIndex(function(r) { return r.key === key; });
+        const lat = Number(p.houseLocation && p.houseLocation.latitude);
+        const lng = Number(p.houseLocation && p.houseLocation.longitude);
+        const rec = {
+            key: key, centerId: p.centerId, community: p.community, addrNo: addrNo,
+            lat: Number.isFinite(lat) ? lat : 0,
+            lng: Number.isFinite(lng) ? lng : 0,
+            status: 'surveyed', updatedAt: new Date().toISOString()
+        };
+        if (idx >= 0) records[idx] = rec; else records.push(rec);
+        saveHouseMarkerRecords(records);
+        if (typeof houseMap !== 'undefined' && houseMap && typeof showAllHouseMarkers === 'function') {
+            showAllHouseMarkers();
+        }
+    } catch (e) {}
+}
+
+window.addEventListener('online', function() {
+    if (outboxCount() > 0) syncOutbox();
+});
+
+/* ---------- แคชข้อมูลในเครื่อง ---------- */
+
+function loadRecordCache() {
+    try { return JSON.parse(localStorage.getItem(RECORD_CACHE_KEY) || '{}'); }
+    catch (e) { return {}; }
+}
+
+function saveRecordCache(obj) {
+    try {
+        const keys = Object.keys(obj);
+        while (keys.length > 200) delete obj[keys.shift()];
+        localStorage.setItem(RECORD_CACHE_KEY, JSON.stringify(obj));
+        return true;
+    } catch (e) { return false; }
+}
+
+function cacheSurveyRecord(payload, photoUrls) {
+    try {
+        const addrNo = (payload.address && payload.address.addrNo || '').trim();
+        const key = houseKeyOf(payload.centerId, payload.community, addrNo);
+        const box = loadRecordCache();
+        const stored = JSON.parse(JSON.stringify(payload));
+        if (photoUrls) {
+            stored.ownerPhotoBase64 = '';
+            (stored.pets || []).forEach(function(pet) { pet.petPhotoBase64 = ''; });
+            stored.existingPhotos = photoUrls;
+        }
+        box[key] = {savedAt: new Date().toISOString(), record: stored};
+        saveRecordCache(box);
+    } catch (e) {}
+}
+
+function getCachedRecord(key) {
+    const box = loadRecordCache();
+    return box[key] ? box[key].record : null;
+}
+
+function refreshRecordCache(payload) {
+    try {
+        fetch(GAS_URL, {method: 'POST', body: JSON.stringify({
+            action: 'getHouse',
+            centerName: payload.centerName,
+            community: payload.community,
+            addrNo: payload.address && payload.address.addrNo
+        })}).then(function(r) { return r.json(); }).then(function(result) {
+            const rec = result && (result.record || (result.message && result.message.record));
+            if (result && result.status === 'success' && (result.found || (result.message && result.message.found)) && rec) {
+                cacheSurveyRecord(payload, rec.existingPhotos);
+            }
+        }).catch(function() {});
+    } catch (e) {}
+}
+
+/* ---------- กันกรอกซ้ำ ---------- */
+
+function checkDuplicateHouse() {
+    const centerId = document.getElementById('centerId').value;
+    const community = document.getElementById('communitySelect').value;
+    const addrNo = document.getElementById('addrNo').value.trim();
+    if (!centerId || !community || !addrNo) return null;
+    const key = houseKeyOf(centerId, community, addrNo);
+    const found = getHouseMarkerRecords().find(function(r) { return r.key === key && r.status === 'surveyed'; });
+    if (found) return 'บ้านเลขที่ ' + addrNo + ' (' + community + ') มีข้อมูลสำรวจแล้วในเครื่องนี้';
+    const pend = loadOutbox().find(function(it) {
+        const p = it.payload || {};
+        return houseKeyOf(p.centerId, p.community, p.address && p.address.addrNo) === key;
+    });
+    if (pend) return 'บ้านเลขที่ ' + addrNo + ' มีรายการค้างส่งในกล่องขาออกแล้ว';
+    return null;
+}
+
+/* ---------- ค้นหา ---------- */
+
+function initSearchCenters() {
+    const sel = document.getElementById('searchCenter');
+    if (!sel || sel.options.length) return;
+    Object.keys(centerNames).forEach(function(id) {
+        const o = document.createElement('option');
+        o.value = id;
+        o.textContent = centerNames[id];
+        sel.appendChild(o);
+    });
+    sel.onchange = initSearchCommunities;
+    initSearchCommunities();
+}
+
+function initSearchCommunities() {
+    const c = document.getElementById('searchCenter').value;
+    const sel = document.getElementById('searchCommunity');
+    sel.innerHTML = '';
+    (communitiesByCenter[c] || []).forEach(function(name) {
+        const o = document.createElement('option');
+        o.value = name;
+        o.textContent = name;
+        sel.appendChild(o);
+    });
+}
+
+function setSearchMsg(t) {
+    const el = document.getElementById('searchMsg');
+    if (el) el.textContent = t;
+}
+
+function searchLocalHouses() {
+    const box = document.getElementById('searchResults');
+    box.innerHTML = '';
+    const c = document.getElementById('searchCenter').value;
+    const comm = document.getElementById('searchCommunity').value;
+    const addrQ = document.getElementById('searchAddrNo').value.trim();
+    const hits = getHouseMarkerRecords().filter(function(r) {
+        return String(r.centerId) === String(c) && r.community === comm && r.status === 'surveyed' &&
+            (!addrQ || (r.addrNo || '').indexOf(addrQ) >= 0);
+    });
+    if (!hits.length) { setSearchMsg('ไม่พบข้อมูลสำรวจในเครื่องนี้ ลองกดโหลดจากเซิร์ฟเวอร์'); return; }
+    setSearchMsg('พบ ' + hits.length + ' หลังในเครื่องนี้');
+    hits.forEach(function(r) {
+        const div = document.createElement('div');
+        div.className = 'search-result-item';
+        const label = document.createElement('span');
+        label.textContent = 'บ้านเลขที่ ' + r.addrNo;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mini-button primary';
+        btn.textContent = 'แก้ไข';
+        btn.onclick = function() {
+            const rec = getCachedRecord(r.key);
+            if (!rec) {
+                setSearchMsg('มีหมุดแต่ไม่มีข้อมูลเต็มของบ้านเลขที่ ' + r.addrNo + ' ในเครื่องนี้ ให้กดโหลดจากเซิร์ฟเวอร์');
+                return;
+            }
+            enterEditMode(rec, r.key);
+        };
+        div.appendChild(label);
+        div.appendChild(btn);
+        box.appendChild(div);
+    });
+}
+
+async function loadHouseFromServer() {
+    const c = document.getElementById('searchCenter').value;
+    const comm = document.getElementById('searchCommunity').value;
+    const addrNo = document.getElementById('searchAddrNo').value.trim();
+    if (!addrNo) { setSearchMsg('กรุณากรอกบ้านเลขที่'); return; }
+    setSearchMsg('กำลังโหลดจากเซิร์ฟเวอร์…');
+    try {
+        const res = await fetch(GAS_URL, {method: 'POST', body: JSON.stringify({
+            action: 'getHouse', centerName: centerNames[c], community: comm, addrNo: addrNo})});
+        const result = JSON.parse(await res.text());
+        const rec = result && (result.record || (result.message && result.message.record));
+        const found = result && (result.found || (result.message && result.message.found));
+        if (!result || result.status !== 'success' || !found || !rec) {
+            setSearchMsg('ไม่พบข้อมูลบ้านเลขที่ ' + addrNo + ' ในเซิร์ฟเวอร์');
+            return;
+        }
+        rec.centerId = c;
+        rec.centerName = centerNames[c];
+        rec.community = comm;
+        cacheSurveyRecord(rec);
+        enterEditMode(rec, houseKeyOf(c, comm, addrNo));
+    } catch (e) {
+        setSearchMsg('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่');
+    }
+}
+
+/* ---------- โหมดแก้ไข ---------- */
+
+function enterEditMode(rec, key) {
+    window.__surveyEdit = {key: key, existingPhotos: rec.existingPhotos || null};
+    fillSurveyForm(rec);
+    document.getElementById('editBanner').hidden = false;
+    document.getElementById('editBannerText').textContent =
+        'กำลังแก้ไขบ้านเลขที่ ' + ((rec.address && rec.address.addrNo) || '') +
+        ' (' + (rec.community || '') + ') — บันทึกแล้วข้อมูลเก่าจะถูกแทนที่';
+    document.getElementById('saveButton').textContent = 'บันทึกการแก้ไข';
+    showPage('formPage');
+    window.scrollTo(0, 0);
+}
+
+function exitEditMode() {
+    window.__surveyEdit = null;
+    const banner = document.getElementById('editBanner');
+    if (banner) banner.hidden = true;
+    const btn = document.getElementById('saveButton');
+    if (btn) btn.textContent = 'บันทึกข้อมูล';
+}
+
+function setSelectValue(el, value) {
+    if (!el) return;
+    const vals = Array.prototype.map.call(el.options, function(o) { return o.value; });
+    if (vals.indexOf(value) >= 0) el.value = value;
+    else el.selectedIndex = 0;
+}
+
+function setVetSelect(card, selCls, nameCls, value) {
+    const sel = card.querySelector(selCls);
+    const nameEl = card.querySelector(nameCls);
+    if (!sel) return;
+    const vals = Array.prototype.map.call(sel.options, function(o) { return o.value; });
+    if (value && vals.indexOf(value) >= 0) {
+        sel.value = value;
+        if (nameEl) { nameEl.value = ''; nameEl.style.display = 'none'; }
+    } else if (value) {
+        sel.value = vals.indexOf('อื่นๆ') >= 0 ? 'อื่นๆ' : vals[0];
+        if (nameEl) { nameEl.style.display = 'block'; nameEl.value = value; }
+    } else {
+        sel.selectedIndex = 0;
+        if (nameEl) { nameEl.value = ''; nameEl.style.display = 'none'; }
+    }
+    sel.dispatchEvent(new Event('change'));
+}
+
+function setPreview(imgEl, url) {
+    if (!imgEl) return;
+    if (url) { imgEl.src = url; imgEl.style.display = 'block'; }
+    else { imgEl.removeAttribute('src'); imgEl.style.display = 'none'; }
+}
+
+function fillSurveyForm(rec) {
+    rec = rec || {};
+    const addr = rec.address || {};
+    document.getElementById('centerId').value = rec.centerId || '';
+    document.getElementById('centerName').value = rec.centerName || '';
+    document.getElementById('centerLabel').textContent = 'ศูนย์ที่กำลังบันทึกข้อมูล: ' + (rec.centerName || '');
+    loadCommunities(rec.centerId);
+    try { setTimeout(function() { if (typeof initHouseMap === 'function') initHouseMap(); }, 150); }
+    catch (e) {}
+    setSelectValue(document.getElementById('communitySelect'), rec.community);
+    setSelectValue(document.getElementById('animalType'), rec.animalType);
+    document.getElementById('animalType').dispatchEvent(new Event('change'));
+    document.getElementById('otherAnimalType').value = rec.otherAnimalType || '';
+    document.getElementById('otherAnimalQty').value = rec.otherAnimalQty || '';
+    const pets = rec.pets || [];
+    petQty.value = pets.length;
+    petQty.dispatchEvent(new Event('input'));
+    const cards = document.querySelectorAll('.pet-card');
+    pets.forEach(function(pet, i) {
+        const card = cards[i];
+        if (!card) return;
+        const q = function(s) { return card.querySelector(s); };
+        if (q('.petName')) q('.petName').value = pet.name || '';
+        setSelectValue(q('.gender'), pet.gender);
+        if (q('.ageYear')) q('.ageYear').value = pet.ageYear || '';
+        if (q('.ageMonth')) q('.ageMonth').value = pet.ageMonth || '';
+        if (q('.color')) q('.color').value = pet.color || '';
+        setSelectValue(q('.sterilization'), pet.sterilization);
+        if (q('.sterilization')) q('.sterilization').dispatchEvent(new Event('change'));
+        if (q('.contraceptiveDate')) q('.contraceptiveDate').value = pet.contraceptiveDate || '';
+        setVetSelect(card, '.contraceptiveVet', '.contraceptiveVetName', pet.contraceptiveVet);
+        setSelectValue(q('.rabies'), pet.rabies);
+        if (q('.rabies')) q('.rabies').dispatchEvent(new Event('change'));
+        if (q('.rabiesDate')) q('.rabiesDate').value = pet.rabiesDate || '';
+        setVetSelect(card, '.rabiesVet', '.rabiesVetName', pet.rabiesVet);
+        setSelectValue(q('.raising'), pet.raisingStyle);
+        setSelectValue(q('.location'), pet.raisingLocation);
+        setPreview(q('.petPhotoPreview'), pet.photoUrl || pet.petPhotoBase64 || '');
+    });
+    document.getElementById('recorderName').value = rec.recorderName || '';
+    setSelectValue(document.getElementById('recorderRole'), rec.recorderRole);
+    document.getElementById('citizenId').value = rec.citizenId || '';
+    document.getElementById('phone').value = rec.phone || '';
+    document.getElementById('homePhone').value = rec.homePhone || '';
+    setSelectValue(document.getElementById('raisingPlace'), rec.raisingArea);
+    document.getElementById('addrNo').value = addr.addrNo || '';
+    document.getElementById('road').value = addr.road || '';
+    document.getElementById('soi').value = addr.soi || '';
+    document.getElementById('subdistrict').value = addr.subdistrict || 'ในเมือง';
+    document.getElementById('district').value = addr.district || 'เมือง';
+    document.getElementById('province').value = addr.province || 'อุบลราชธานี';
+    const hl = rec.houseLocation || {};
+    document.getElementById('houseLat').value = hl.latitude || '';
+    document.getElementById('houseLng').value = hl.longitude || '';
+    document.getElementById('houseMapCoords').textContent =
+        (hl.latitude && hl.longitude) ? ('พิกัดที่เลือก: ' + hl.latitude + ', ' + hl.longitude) : 'ยังไม่ได้เลือกพิกัด';
+    setPreview(document.getElementById('ownerPhotoPreview'), rec.ownerPhotoUrl || rec.ownerPhotoBase64 || '');
+    const eps = {owner: rec.ownerPhotoUrl || '', pets: pets.map(function(p) { return p.photoUrl || ''; })};
+    if (window.__surveyEdit) window.__surveyEdit.existingPhotos = rec.existingPhotos || eps;
+}
+
+updateOutboxBadge();
 
 </script>
 
