@@ -1558,6 +1558,19 @@ function savePendingHouseMarker() {
     setHouseMapMessage('บันทึกหมุดบ้านเลขที่ ' + addrNo + ' เป็นสถานะยังไม่ได้สำรวจแล้ว');
 }
 
+function removeLocalHouseMarker(kept, addrNo) {
+    saveHouseMarkerRecords(kept);
+    if (selectedHouseMarker && houseMap) {
+        houseMap.removeLayer(selectedHouseMarker);
+        selectedHouseMarker = null;
+    }
+    document.getElementById('houseLat').value = '';
+    document.getElementById('houseLng').value = '';
+    document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
+    selectedHouseKey = null;
+    showAllHouseMarkers();
+}
+
 async function deleteSelectedHouseMarker() {
     const centerId = document.getElementById('centerId').value;
     const centerName = document.getElementById('centerName').value;
@@ -1588,6 +1601,14 @@ async function deleteSelectedHouseMarker() {
         setHouseMapMessage('ไม่พบหมุดบ้านเลขที่ ' + addrNo + ' ในชุมชนนี้ (อาจยังไม่ได้บันทึกหมุด)');
         return;
     }
+    const targetRec = records.filter(function(r) { return r.key === key; })[0];
+    if (!targetRec || targetRec.status !== 'surveyed') {
+        /* หมุดรอสำรวจยังไม่มีข้อมูลในชีต ลบแค่ในเครื่องได้เลย ไม่ต้องใส่รหัส */
+        if (!confirm('ลบหมุดบ้านเลขที่ ' + addrNo + ' หรือไม่ (บ้านนี้ยังไม่มีข้อมูลในชีต)')) return;
+        removeLocalHouseMarker(kept, addrNo);
+        setHouseMapMessage('ลบหมุดบ้านเลขที่ ' + addrNo + ' แล้ว');
+        return;
+    }
     const passcode = prompt('กรุณาใส่รหัสยืนยันเพื่อลบข้อมูลบ้านเลขที่ ' + addrNo + '\n(ลบทั้งหมุดบนแผนที่และข้อมูลในชีต)');
     if (passcode === null) return;
     setHouseMapMessage('กำลังลบข้อมูลบ้านเลขที่ ' + addrNo + ' ในชีต...');
@@ -1607,16 +1628,7 @@ async function deleteSelectedHouseMarker() {
             setHouseMapMessage('ลบในชีตไม่สำเร็จ: ' + (result.message || 'ไม่ทราบสาเหตุ') + ' (หมุดยังอยู่)');
             return;
         }
-        saveHouseMarkerRecords(kept);
-        if (selectedHouseMarker && houseMap) {
-            houseMap.removeLayer(selectedHouseMarker);
-            selectedHouseMarker = null;
-        }
-        document.getElementById('houseLat').value = '';
-        document.getElementById('houseLng').value = '';
-        document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
-        selectedHouseKey = null;
-        showAllHouseMarkers();
+        removeLocalHouseMarker(kept, addrNo);
         setHouseMapMessage('✅ ลบข้อมูลบ้านเลขที่ ' + addrNo);
     } catch (err) {
         console.error(err);
