@@ -20,6 +20,7 @@ const MASTER_HEADERS = [
   "ชื่อเจ้าของสัตว์","เลขบัตรประชาชน","เบอร์โทรศัพท์มือถือ",
   "เบอร์โทรศัพท์บ้าน","บ้านเลขที่","ถนน","ซอย",
   "ตำบล","อำเภอ","จังหวัด",
+  "พิกัดที่เลือก",
   "ผู้บันทึก","ตำแหน่ง",
   "ลิงก์รูปเจ้าของ","ลิงก์รูปสัตว์"
 ];
@@ -45,6 +46,15 @@ function doPost(e) {
       return output_('JSON ไม่ถูกต้อง');
     }
 
+    // คำสั่งลบข้อมูลบ้าน (จากปุ่มลบหมุดในฟอร์ม)
+    if (data && data.action === 'deleteHouse') {
+      return deleteHouseData_(data);
+    }
+
+    if (data && data.action === 'getHouse') {
+      return getHouseData_(data);
+    }
+
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const timestamp = new Date();
 
@@ -57,6 +67,14 @@ function doPost(e) {
     }
 
     const addr = data.address || {};
+
+    // โหมดแก้ไข: ลบแถวเดิมของบ้านหลังนี้ก่อน แล้วบันทึกรอบใหม่ทับ (กันแถวซ้ำ)
+    const isUpdate = data && data.action === 'updateHouse';
+    if (isUpdate) {
+      const removed = deleteHouseRows_(ss, centerName, communityName, formatHouseNo_(addr.addrNo));
+      Logger.log('UPDATE removed rows: ' + removed);
+    }
+    const keepPhotos = isUpdate ? (data.existingPhotos || {}) : null;
 
     /************ PET STRUCTURE ************/
     let pets = [];
@@ -116,11 +134,14 @@ function doPost(e) {
       communityFolder, ownerFolderName
     );
 
-    const ownerPhotoUrl = savePhotoSmart_(
+    let ownerPhotoUrl = savePhotoSmart_(
       data.ownerPhotoBase64 || data.ownerPhoto || data.ownerImage,
       ownerFolder,
       'รูปเจ้าของ'
     );
+    if (!ownerPhotoUrl && keepPhotos && keepPhotos.owner) {
+      ownerPhotoUrl = keepPhotos.owner;
+    }
 
     const petMainFolder = getOrCreateFolder_(
       ownerFolder, 'สัตว์เลี้ยง'
@@ -170,6 +191,9 @@ function doPost(e) {
           'สัตว์_' + (index + 1)
         );
       }
+      if (!petPhotoUrl && keepPhotos && keepPhotos.pets && keepPhotos.pets[index]) {
+        petPhotoUrl = keepPhotos.pets[index];
+      }
 
       const rowObj = buildRowObject_(
         timestamp, year, centerName, communityName,
@@ -180,12 +204,32 @@ function doPost(e) {
       appendSafe_(communitySheet, rowObj);
     });
 
-    // บันทึกข้อมูลหลักเสร็จแล้ว ให้ตอบกลับทันที ไม่รอสร้างรายงานทั้งชุด
-    // เพื่อป้องกันมือถือหมดเวลารอและแจ้งว่าบันทึกไม่สำเร็จทั้งที่ข้อมูลเข้าแล้ว
-    ensureSummaryTrigger_();
+    // บันทึกข้อมูลหลักเสร็จแล้ว
+    // อัปเดต SUMMARY_AUTO + CHARTS_AUTO ทันทีในรอบเดียวกัน (ไม่พึ่ง trigger เบื้องหลัง)
+    let summaryNote = '';
+    try {
+      buildSummaryAndDashboardCore_();
+      SpreadsheetApp.flush();
+      try {
+        createHouseholdCharts_();
+        SpreadsheetApp.flush();
+      } catch (chartErr) {
+        summaryNote = ' (สร้างกราฟไม่สำเร็จ: ' + (chartErr.message || chartErr) + ')';
+        Logger.log('CHART ERROR: ' + (chartErr.stack || chartErr));
+      }
+    } catch (sumErr) {
+      Logger.log('SUMMARY ERROR: ' + (sumErr.stack || sumErr));
+      return output_(
+        'บันทึกข้อมูลลงชีตศูนย์/ชุมชนแล้ว แต่อัปเดต SUMMARY_AUTO ไม่สำเร็จ: ' + (sumErr.message || sumErr),
+        true
+      );
+    }
 
-    return output_('บันทึกข้อมูลสำเร็จ', true);
-
+    return output_(
+      (isUpdate ? 'แก้ไขข้อมูลบ้านเลขที่ ' + safe_(addr.addrNo) + ' สำเร็จ อัปเดต SUMMARY_AUTO และ CHARTS_AUTO แล้ว'
+                : 'บันทึกข้อมูลสำเร็จ อัปเดต SUMMARY_AUTO และ CHARTS_AUTO แล้ว') + summaryNote,
+      true
+    );
   } catch (err) {
     Logger.log(err.stack || err);
     return output_(err.message || String(err));
@@ -194,29 +238,76 @@ function doPost(e) {
   }
 }
 
-/******************** AUTO SUMMARY TRIGGER ********************/
-/**
- * สร้าง Trigger สรุปข้อมูลทุก 5 นาทีเพียงครั้งเดียว
- * แยกการสร้างรายงานออกจากการบันทึก เพื่อลดเวลารอของมือถือ
- */
-function ensureSummaryTrigger_() {
-  try {
-    const exists = ScriptApp.getProjectTriggers().some(trigger =>
-      trigger.getHandlerFunction() === 'buildSummaryAndDashboard'
-    );
-    if (!exists) {
-      ScriptApp.newTrigger('buildSummaryAndDashboard')
-        .timeBased()
-        .everyMinutes(5)
-        .create();
-    }
-  } catch (err) {
-    // ไม่ให้ปัญหาการสร้าง Trigger ทำให้การบันทึกข้อมูลล้มเหลว
-    Logger.log('ตั้ง Trigger สรุปข้อมูลไม่สำเร็จ: ' + (err.stack || err));
-  }
-}
+
 
 /******************** BUILD ROW ********************/
+
+/*
+ * ลบข้อมูลบ้านออกจากชีตศูนย์ + ชีตชุมชน (เรียกจากปุ่มลบหมุดในฟอร์ม)
+ * คืนจำนวนแถวที่ลบ แล้วสร้าง SUMMARY_AUTO + CHARTS_AUTO ใหม่ทันที
+ */
+function deleteHouseData_(data) {
+  if (data.passcode !== 'babydog4321') {
+    return output_('รหัสไม่ถูกต้อง ไม่สามารถลบข้อมูลได้');
+  }
+
+  const centerName = safe_(data.centerName || data.center);
+  const communityName = safe_(data.communityName || data.community);
+  const addrNo = safe_(data.addrNo);
+
+  if (!centerName || !communityName || !addrNo) {
+    return output_('ข้อมูลไม่ครบ (ต้องมีศูนย์ ชุมชน บ้านเลขที่)');
+  }
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let total = 0;
+
+  [centerName, communityName].forEach(function(name) {
+    const sheet = ss.getSheetByName(name);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const lastCol = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastCol)
+      .getDisplayValues()[0].map(function(h) { return String(h).trim(); });
+    const ci = headers.indexOf('ชุมชน');
+    const hi = headers.indexOf('บ้านเลขที่');
+    if (ci === -1 || hi === -1) return;
+
+    const vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+    const delRows = [];
+    vals.forEach(function(r, i) {
+      const comOk = String(r[ci]).trim() === communityName;
+      const houseOk = formatHouseNo_(r[hi]) === addrNo;
+      if (comOk && houseOk) delRows.push(i + 2);
+    });
+
+    delRows.sort(function(a, b) { return b - a; }).forEach(function(ro) {
+      sheet.deleteRow(ro);
+    });
+    total += delRows.length;
+  });
+
+  if (total === 0) {
+    return output_('ไม่พบข้อมูลบ้านเลขที่ ' + addrNo + ' ในชีต (อาจถูกลบไปแล้ว)');
+  }
+
+  // สร้างสรุปใหม่ทันทีเพื่อให้ข้อมูลตรงจริง
+  try {
+    buildSummaryAndDashboardCore_();
+    SpreadsheetApp.flush();
+    try {
+      createHouseholdCharts_();
+      SpreadsheetApp.flush();
+    } catch (chartErr) {
+      Logger.log('CHART ERROR: ' + (chartErr.stack || chartErr));
+    }
+  } catch (sumErr) {
+    Logger.log('SUMMARY ERROR: ' + (sumErr.stack || sumErr));
+  }
+
+  return output_('ลบข้อมูลบ้านเลขที่ ' + addrNo + ' จำนวน ' + total + ' แถว และอัปเดตสรุปแล้ว', true);
+}
+
 function buildRowObject_(
   timestamp, year, centerName, communityName,
   data, pet, index, addr, ownerPhotoUrl, petPhotoUrl
@@ -352,6 +443,19 @@ function buildRowObject_(
     "อำเภอ": pick_(addr.district),
     "จังหวัด": pick_(addr.province),
 
+    // พิกัดบ้านที่เลือกจากแผนที่ เช่น 15.228664, 104.861098
+    "พิกัดที่เลือก": (() => {
+      const hl = data.houseLocation || {};
+      const latS = String(
+        hl.latitude || hl.lat || data.houseLat || data.latitude || ''
+      ).trim();
+      const lngS = String(
+        hl.longitude || hl.lng || data.houseLng || data.longitude || ''
+      ).trim();
+      if (!latS || !lngS) return '';
+      return latS + ', ' + lngS;
+    })(),
+
     "ผู้บันทึก": pick_(data.recorderName),
     "ตำแหน่ง": pick_(data.recorderRole),
 
@@ -413,12 +517,64 @@ function setHouseNumberColumnText_(sheet) {
   ).setNumberFormat('@');
 }
 
-/******************** APPEND ********************/
-function appendSafe_(sheet, rowObj) {
-  autoAddMissingColumns_(sheet, rowObj);
+/*
+ * เพิ่มคอลัมน์ "พิกัดที่เลือก" ให้ชีตศูนย์ 1-7 และทุกชีตชุมชน
+ * วิธีใช้: วางไฟล์นี้ทับของเดิม แล้วกด Run → addHouseLocationColumnNow หนึ่งครั้ง
+ */
+function addHouseLocationColumnNow() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const skip = ['SUMMARY_AUTO', 'DASHBOARD_AUTO', 'CHARTS_AUTO'];
 
-  // ตั้งรูปแบบข้อความก่อนเพิ่มแถว
-  setHouseNumberColumnText_(sheet);
+  ss.getSheets().forEach(sheet => {
+    const name = sheet.getName();
+    if (skip.indexOf(name) !== -1) return;
+
+    const lastCol = sheet.getLastColumn();
+    if (lastCol < 1) return;
+
+    const headers = sheet.getRange(1, 1, 1, lastCol)
+      .getDisplayValues()[0].map(h => String(h).trim());
+
+    // ข้ามชีตที่ไม่ใช่ชีตข้อมูล
+    if (headers.indexOf('จังหวัด') === -1) return;
+
+    // มีคอลัมน์แล้ว ข้าม
+    if (headers.indexOf('พิกัดที่เลือก') !== -1) {
+      Logger.log('มีแล้ว: ' + name);
+      return;
+    }
+
+    // แทรกหลังคอลัมน์ "จังหวัด"
+    const provinceCol = headers.indexOf('จังหวัด') + 1; // 1-based
+    sheet.insertColumnAfter(provinceCol);
+    sheet.getRange(1, provinceCol + 1).setValue('พิกัดที่เลือก');
+
+    // ตั้งคอลัมน์เป็นข้อความ กันชีตแปลงค่าพิกัด
+    sheet.getRange(
+      2, provinceCol + 1,
+      Math.max(sheet.getMaxRows() - 1, 1), 1
+    ).setNumberFormat('@');
+
+    Logger.log('เพิ่มแล้ว: ' + name);
+  });
+}
+
+
+/************************************************************
+ * BULK APPEND
+ * บันทึกสัตว์หลายตัวพร้อมกัน
+ ************************************************************/
+
+function appendManySafe_(sheet, rowObjects) {
+
+  if (!rowObjects || rowObjects.length === 0) {
+    return;
+  }
+
+  // เพิ่มคอลัมน์ที่ขาดก่อน
+  rowObjects.forEach(rowObj => {
+    autoAddMissingColumns_(sheet, rowObj);
+  });
 
   const lastColumn = sheet.getLastColumn();
 
@@ -426,47 +582,75 @@ function appendSafe_(sheet, rowObj) {
     1, 1, 1, lastColumn
   ).getValues()[0].map(h => String(h).trim());
 
-  const row = headers.map(h => {
-    const value = rowObj[h];
+  const houseIndex = headers.indexOf('บ้านเลขที่');
+  const timestampIndex = headers.indexOf('timestamp');
 
-    if (h === 'บ้านเลขที่') {
-      return formatHouseNo_(value);
-    }
+  const rows = rowObjects.map(rowObj => {
 
-    return value !== undefined && value !== null ? value : '';
+    return headers.map(header => {
+
+      const value = rowObj[header];
+
+      if (header === 'บ้านเลขที่') {
+        return formatHouseNo_(value);
+      }
+
+      return value !== undefined && value !== null
+        ? value
+        : '';
+
+    });
+
   });
 
-  if (row.some(v => v !== '' && v !== null && v !== undefined)) {
-    // เขียนด้วย setValues แทน appendRow และตั้งช่องบ้านเลขที่เป็นข้อความ
-    // ก่อนเขียน เพื่อป้องกัน Google Sheets แปลงค่า เช่น 23/3 ให้เป็นวันที่
-    const nextRow = sheet.getLastRow() + 1;
-    const houseIndex = headers.indexOf('บ้านเลขที่');
+  const startRow = sheet.getLastRow() + 1;
 
-    if (houseIndex >= 0) {
-      sheet.getRange(nextRow, houseIndex + 1, 1, 1).setNumberFormat('@');
-    }
+  // ตั้งบ้านเลขที่เป็นข้อความก่อนเขียน
+  if (houseIndex >= 0) {
 
-    sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+    sheet.getRange(
+      startRow,
+      houseIndex + 1,
+      rows.length,
+      1
+    ).setNumberFormat('@');
 
-    // ตั้งรูปแบบ timestamp ให้แสดงทั้งวันที่และเวลา
-    const tsIndex = headers.indexOf('timestamp');
-    if (tsIndex >= 0) {
-      sheet.getRange(nextRow, tsIndex + 1, 1, 1)
-        .setNumberFormat(TIMESTAMP_FORMAT);
-    }
-
-    // ย้ำรูปแบบข้อความหลังเขียน
-    if (houseIndex >= 0) {
-      sheet.getRange(nextRow, houseIndex + 1, 1, 1).setNumberFormat('@');
-    }
   }
+
+  // เขียนหลายแถวด้วยคำสั่งเดียว
+  sheet.getRange(
+    startRow,
+    1,
+    rows.length,
+    headers.length
+  ).setValues(rows);
+
+  // ตั้ง timestamp
+  if (timestampIndex >= 0) {
+
+    sheet.getRange(
+      startRow,
+      timestampIndex + 1,
+      rows.length,
+      1
+    ).setNumberFormat(TIMESTAMP_FORMAT);
+
+  }
+
+  // ย้ำบ้านเลขที่
+  if (houseIndex >= 0) {
+
+    sheet.getRange(
+      startRow,
+      houseIndex + 1,
+      rows.length,
+      1
+    ).setNumberFormat('@');
+
+  }
+
 }
 
-/**
- * รันครั้งเดียวด้วยมือ (เลือกฟังก์ชันนี้แล้วกด Run)
- * เพื่อแก้รูปแบบ timestamp ของแถวเดิมในทุกชีตให้แสดงเวลาด้วย
- * ดูผลว่าชีตไหนแก้แล้ว/ข้ามเพราะอะไร ได้ที่ View > Execution log
- */
 function fixTimestampFormatAllSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
@@ -682,28 +866,37 @@ function normalizeSummaryAnimalType_(rawType) {
 }
 
 /******************** SUMMARY AND DASHBOARD ********************/
-function buildSummaryAndDashboard() {
+function buildSummaryAndDashboardCore_() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheets = ss.getSheets();
 
   let allData = [];
 
   /************ อ่านข้อมูลจากชีตชุมชน ************/
+  // ต้องบันทึก log ภายใน forEach เท่านั้น เพราะ name และ sheet
+  // จะถูกกำหนดค่าภายใน callback ของแต่ละชีต
   sheets.forEach(sheet => {
     const name = sheet.getName();
 
-    if (name === 'SUMMARY_AUTO' || name === 'DASHBOARD_AUTO') {
+    if (name === 'SUMMARY_AUTO' || name === 'DASHBOARD_AUTO' || name === 'CHARTS_AUTO') {
+      Logger.log('ข้ามชีตระบบ: ' + name);
       return;
     }
 
     const values = sheet.getDataRange().getValues();
 
-    if (values.length < 2) return;
+    if (values.length < 2) {
+      Logger.log('ข้าม (มีแค่หัวตารางหรือชีตว่าง): ' + name);
+      return;
+    }
 
     const headers = values[0].map(h => String(h).trim());
     const communityIndex = headers.indexOf('ชุมชน');
 
-    if (communityIndex === -1) return;
+    if (communityIndex === -1) {
+      Logger.log('ข้าม (ไม่พบหัวคอลัมน์ "ชุมชน"): ' + name + ' | หัวที่มี: ' + headers.slice(0, 8).join(','));
+      return;
+    }
 
     let sampleCommunity = '';
 
@@ -715,7 +908,12 @@ function buildSummaryAndDashboard() {
     }
 
     // ป้องกันการนับข้อมูลจากชีตศูนย์ซ้ำ
-    if (!sampleCommunity || name !== sampleCommunity) return;
+    if (!sampleCommunity || name !== sampleCommunity) {
+      Logger.log('ข้าม (ชื่อชีตไม่ตรงค่าชุมชนในแถว): ชีต=' + name + ' ค่าชุมชน=' + (sampleCommunity || '(ว่าง)'));
+      return;
+    }
+
+    Logger.log('อ่านชีต: ' + name + ' (' + (values.length - 1) + ' แถวข้อมูล)');
 
     values.slice(1).forEach(row => {
       const obj = {};
@@ -731,8 +929,9 @@ function buildSummaryAndDashboard() {
     });
   });
 
+  Logger.log('รวมแถวข้อมูลทั้งหมด: ' + allData.length + ' แถว');
   if (allData.length === 0) {
-    Logger.log('ไม่มีข้อมูล');
+    Logger.log('ไม่มีข้อมูล: ไม่สร้าง SUMMARY_AUTO (ตรวจว่าแถวในชีตชุมชนมีค่าคอลัมน์ "ชุมชน" ตรงกับชื่อชีตหรือไม่)');
     return;
   }
 
@@ -1137,6 +1336,875 @@ function buildSummaryAndDashboard() {
 
   Logger.log(
     'สร้าง SUMMARY_AUTO สำเร็จ: ' +
-    addressRows.length + ' รายการบ้าน และสรุปตามเขตพื้นที่รับผิดชอบ ' + zoneRows.length + ' รายการศูนย์'
+    addressRows.length + ' รายการบ้าน และสรุปตามเขตพื้นที่รับผิดชอบ ' + zoneRows.length + ' รายการศูนย์' );
+
+
+/************************************************************
+ * HOUSEHOLD SURVEY SUMMARY
+ * สรุปครัวเรือนที่สำรวจแยกตามศูนย์บริการ 1-7
+ * พร้อมรายชื่อบ้านที่สำรวจและจำนวนสัตว์
+ ************************************************************/
+
+const householdTargets = {
+  '1': 1783,
+  '2': 2691,
+  '3': 2440,
+  '4': 1794,
+  '5': 3168,
+  '6': 1658,
+  '7': 4768
+};
+
+const animalTypes = [
+  'สุนัข', 'แมว', 'โค', 'เป็ด', 'ไก่',
+  'สุกร', 'นก', 'แพะ', 'ม้า', 'อื่นๆ'
+];
+
+const householdMap = {};
+const householdCounts = {
+  '1': new Set(),
+  '2': new Set(),
+  '3': new Set(),
+  '4': new Set(),
+  '5': new Set(),
+  '6': new Set(),
+  '7': new Set()
+};
+
+// อ่านข้อมูลทุกครัวเรือนจากข้อมูลที่รวบรวมไว้
+allData.forEach(obj => {
+
+  const centerName = String(
+    obj['ศูนย์บริการ'] || ''
+  ).trim();
+
+  const communityName = String(
+    obj['ชุมชน'] || ''
+  ).trim();
+
+  const houseNo = formatHouseNo_(
+    obj['บ้านเลขที่']
   );
+
+  const road = String(
+    obj['ถนน'] || ''
+  ).trim();
+
+  // รองรับชื่อศูนย์หลายรูปแบบ
+  const match = centerName.match(
+    /ศูนย์ที่\s*([1-7])/
+  );
+
+  if (!match) return;
+  if (!communityName || !houseNo) return;
+
+  const centerNo = match[1];
+
+  // บ้านหนึ่งหลังนับเพียงครั้งเดียวในชุมชนเดียวกัน
+  const householdKey = JSON.stringify([
+  centerNo,
+  communityName,
+  houseNo,
+  road
+]);
+
+  householdCounts[centerNo].add(householdKey);
+
+  // เก็บรายละเอียดครัวเรือน
+  if (!householdMap[householdKey]) {
+
+    householdMap[householdKey] = {
+      center: 'ศูนย์บริการสาธารณสุขศูนย์ที่ ' + centerNo,
+      community: communityName,
+      houseNo: houseNo,
+      road: road || 'ไม่ระบุ',
+      animals: {
+        'สุนัข': 0,
+        'แมว': 0,
+        'โค': 0,
+        'เป็ด': 0,
+        'ไก่': 0,
+        'สุกร': 0,
+        'นก': 0,
+        'แพะ': 0,
+        'ม้า': 0,
+        'อื่นๆ': 0
+      }
+    };
+  }
+
+  // นับจำนวนสัตว์ที่พบในบ้านหลังนี้
+  const type = normalizeSummaryAnimalType_(
+    obj['ประเภทสัตว์']
+  );
+
+  if (type) {
+    let qty = 1;
+
+    if (type === 'อื่นๆ') {
+      const otherQty = Number(
+        obj['จำนวนสัตว์ (อื่น)']
+      );
+
+      qty = otherQty > 0 ? otherQty : 1;
+    }
+
+    householdMap[householdKey].animals[type] += qty;
+  }
+
+});
+
+// เรียงลำดับครัวเรือนตามศูนย์และชุมชน
+const householdDetails = Object.values(householdMap)
+  .sort((a, b) => {
+
+    const centerA = Number(
+      a.center.match(/([1-7])$/)[1]
+    );
+
+    const centerB = Number(
+      b.center.match(/([1-7])$/)[1]
+    );
+
+    if (centerA !== centerB) {
+      return centerA - centerB;
+    }
+
+    const communityCompare =
+      a.community.localeCompare(b.community, 'th');
+
+    if (communityCompare !== 0) {
+      return communityCompare;
+    }
+
+    return a.houseNo.localeCompare(b.houseNo, 'th');
+  });
+
+// ตำแหน่งตารางต่อจากตารางก่อนหน้า
+let householdTableStart =
+  zoneTableStart + Math.max(zoneRows.length, 1) + 4;
+
+// ======================================
+// ตารางที่ 1 รายชื่อบ้านที่สำรวจ
+// ======================================
+
+sumSheet.getRange(
+  householdTableStart, 1
+).setValue('รายละเอียดครัวเรือนที่สำรวจข้อมูลสัตว์');
+
+const detailHeaders = [
+  'ศูนย์บริการ',
+  'ชุมชน',
+  'บ้านเลขที่',
+  'ถนน',
+  ...animalTypes,
+  'รวมสัตว์'
+];
+
+sumSheet.getRange(
+  householdTableStart + 1,
+  1,
+  1,
+  detailHeaders.length
+).setValues([detailHeaders]);
+
+const detailRows = householdDetails.map(item => {
+
+  const counts = animalTypes.map(
+    type => item.animals[type] || 0
+  );
+
+  const totalAnimals = counts.reduce(
+    (sum, value) => sum + value,
+    0
+  );
+
+  return [
+    item.center,
+    item.community,
+    item.houseNo,
+    item.road,
+    ...counts,
+    totalAnimals
+  ];
+});
+
+if (detailRows.length > 0) {
+
+  // บ้านเลขที่เป็นข้อความ
+  sumSheet.getRange(
+    householdTableStart + 2,
+    3,
+    detailRows.length,
+    1
+  ).setNumberFormat('@');
+
+  sumSheet.getRange(
+    householdTableStart + 2,
+    1,
+    detailRows.length,
+    detailHeaders.length
+  ).setValues(detailRows);
+}
+
+// จัดรูปแบบตารางรายละเอียด
+sumSheet.getRange(
+  householdTableStart + 1,
+  1,
+  1,
+  detailHeaders.length
+).setFontWeight('bold');
+
+// ======================================
+// ตารางที่ 2 สรุปจำนวนครัวเรือนและร้อยละ
+// ======================================
+
+const summaryStart =
+  householdTableStart + Math.max(detailRows.length, 1) + 4;
+
+sumSheet.getRange(
+  summaryStart, 1
+).setValue('สรุปจำนวนครัวเรือนที่สำรวจ แยกตามศูนย์บริการสาธารณสุข');
+
+const summaryHeaders = [
+  'ศูนย์บริการสาธารณสุข',
+  'จำนวนครัวเรือนเป้าหมาย',
+  'จำนวนครัวเรือนที่สำรวจ',
+  'จำนวนครัวเรือนคงเหลือ',
+  'ร้อยละความครอบคลุม'
+];
+
+sumSheet.getRange(
+  summaryStart + 1,
+  1,
+  1,
+  summaryHeaders.length
+).setValues([summaryHeaders]);
+
+const summaryRows = [];
+
+let totalTarget = 0;
+let totalSurveyed = 0;
+
+for (let i = 1; i <= 7; i++) {
+
+  const centerNo = String(i);
+
+  const target = householdTargets[centerNo];
+
+  const surveyed = householdCounts[centerNo].size;
+
+  const remaining = target - surveyed;
+
+  const percentage = target > 0
+    ? surveyed / target
+    : 0;
+
+  totalTarget += target;
+  totalSurveyed += surveyed;
+
+  summaryRows.push([
+    'ศูนย์บริการสาธารณสุขศูนย์ที่ ' + i,
+    target,
+    surveyed,
+    remaining,
+    percentage
+  ]);
+}
+
+// แถวรวมทั้ง 7 ศูนย์
+summaryRows.push([
+  'รวมทั้งหมด',
+  totalTarget,
+  totalSurveyed,
+  totalTarget - totalSurveyed,
+  totalTarget > 0 ? totalSurveyed / totalTarget : 0
+]);
+
+sumSheet.getRange(
+  summaryStart + 2,
+  1,
+  summaryRows.length,
+  summaryHeaders.length
+).setValues(summaryRows);
+
+// จัดรูปแบบหัวตาราง
+sumSheet.getRange(
+  summaryStart + 1,
+  1,
+  1,
+  summaryHeaders.length
+).setFontWeight('bold');
+
+// เน้นแถวรวม
+const totalRow =
+  summaryStart + 2 + summaryRows.length - 1;
+
+sumSheet.getRange(
+  totalRow,
+  1,
+  1,
+  summaryHeaders.length
+).setFontWeight('bold');
+
+// แสดงเปอร์เซ็นต์
+sumSheet.getRange(
+  summaryStart + 2,
+  5,
+  summaryRows.length,
+  1
+).setNumberFormat('0.00%');
+
+// จัดรูปแบบ
+sumSheet.getRange(
+  summaryStart + 1,
+  1,
+  summaryRows.length + 1,
+  summaryHeaders.length
+).setVerticalAlignment('middle');
+
+sumSheet.autoResizeColumns(
+  1,
+  Math.max(detailHeaders.length, summaryHeaders.length)
+);
+
+Logger.log(
+  'สร้างตารางครัวเรือนสำเร็จ: ' +
+  totalSurveyed + ' ครัวเรือน จาก ' +
+  totalTarget + ' ครัวเรือน'
+);
+}
+
+/************************************************************
+ * BACKGROUND SUMMARY + CHART QUEUE (worker)
+ ************************************************************/
+
+const SUMMARY_WORKER_NAME = 'processSummaryQueue';
+
+/**
+ * คงไว้เผื่อ trigger เก่าที่ยังเหลืออยู่เรียกมา
+ * (ปัจจุบัน doPost อัปเดตสรุปทันทีแล้ว ไม่สร้าง trigger ใหม่)
+ */
+function processSummaryQueue() {
+  buildSummaryAndDashboardCore_();
+  SpreadsheetApp.flush();
+  try {
+    createHouseholdCharts_();
+    SpreadsheetApp.flush();
+  } catch (chartErr) {
+    Logger.log('CHART ERROR: ' + (chartErr.stack || chartErr));
+  }
+  Logger.log('อัปเดต SUMMARY_AUTO และ CHARTS_AUTO สำเร็จ');
+}
+
+/************************************************************
+ * หาตำแหน่งวางกราฟใหม่
+ ************************************************************/
+
+function getNextHouseholdChartRow_(sheet) {
+
+  const charts = sheet.getCharts();
+
+  if (charts.length === 0) {
+    return 2;
+  }
+
+  let maxRow = 1;
+
+  charts.forEach(chart => {
+
+    const info = chart.getContainerInfo();
+
+    const anchorRow = info.getAnchorRow();
+
+    const offsetHeight = info.getOffsetHeight();
+
+    const estimatedRows = Math.ceil(
+      offsetHeight / 20
+    );
+
+    maxRow = Math.max(
+      maxRow,
+      anchorRow + Math.max(estimatedRows, 20) + 3
+    );
+
+  });
+
+  return maxRow + 2;
+}
+
+
+function rebuildHouseholdChartsNow() {
+
+  const lock = LockService.getScriptLock();
+
+  if (!lock.tryLock(30000)) {
+    throw new Error('ระบบกำลังประมวลผล');
+  }
+
+  try {
+
+    createHouseholdCharts_();
+
+    SpreadsheetApp.flush();
+
+    Logger.log('สร้างกราฟครัวเรือนสำเร็จ');
+
+  } finally {
+
+    lock.releaseLock();
+
+  }
+
+}
+
+/************************************************************
+ * HOUSEHOLD CHARTS AUTO - FINAL VERSION
+ ************************************************************/
+
+const HOUSEHOLD_CHART_TITLE_1 =
+  'จำนวนครัวเรือนเป้าหมาย เทียบกับที่สำรวจ';
+
+const HOUSEHOLD_CHART_TITLE_2 =
+  'ร้อยละความครอบคลุมการสำรวจครัวเรือน';
+
+
+function createHouseholdCharts_() {
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  const summarySheet = ss.getSheetByName('SUMMARY_AUTO');
+
+  if (!summarySheet) {
+    throw new Error('ไม่พบ SUMMARY_AUTO');
+  }
+
+  let chartSheet = ss.getSheetByName('CHARTS_AUTO');
+
+  if (!chartSheet) {
+    chartSheet = ss.insertSheet('CHARTS_AUTO');
+  }
+
+  // --------------------------------
+  // ค้นหาตารางสรุปครัวเรือน
+  // --------------------------------
+
+  const lastRow = summarySheet.getLastRow();
+
+  const values = summarySheet
+    .getRange(1, 1, lastRow, 5)
+    .getDisplayValues();
+
+  const title =
+    'สรุปจำนวนครัวเรือนที่สำรวจ แยกตามศูนย์บริการสาธารณสุข';
+
+  let titleIndex = -1;
+
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0]).trim() === title) {
+      titleIndex = i;
+      break;
+    }
+  }
+
+  if (titleIndex === -1) {
+    throw new Error('ไม่พบหัวข้อตารางครัวเรือน');
+  }
+
+  const headerRow = titleIndex + 2;
+  const dataStartRow = headerRow + 1;
+
+  // --------------------------------
+  // ตรวจสอบหัวตาราง
+  // --------------------------------
+
+  const headers = summarySheet
+    .getRange(headerRow, 1, 1, 5)
+    .getDisplayValues()[0];
+
+  if (headers[0] !== 'ศูนย์บริการสาธารณสุข') {
+    throw new Error('หัวตารางไม่ถูกต้อง');
+  }
+
+  // --------------------------------
+  // อ่านข้อมูล 7 ศูนย์
+  // --------------------------------
+
+  const data = summarySheet
+    .getRange(dataStartRow, 1, 7, 5)
+    .getValues();
+
+  if (data.some(row => !row[0])) {
+    throw new Error('ข้อมูลครัวเรือนทั้ง 7 ศูนย์ไม่ครบ');
+  }
+
+  // --------------------------------
+  // สร้างตารางช่วยในชีตกราฟ
+  // ใช้คอลัมน์ X:AA
+  // --------------------------------
+
+  const helperCol = 24;
+
+  const helper = [
+    [
+      'ศูนย์บริการ',
+      'เป้าหมาย',
+      'สำรวจแล้ว',
+      'ความครอบคลุม'
+    ],
+    ...data.map(row => [
+      row[0],
+      Number(row[1]) || 0,
+      Number(row[2]) || 0,
+      Number(row[4]) || 0
+    ])
+  ];
+
+  // ตรวจสอบพื้นที่ช่วยก่อนเขียน
+  // เพื่อไม่เขียนทับข้อมูลเดิม
+  const helperRange = chartSheet.getRange(
+    1, helperCol, 8, 4
+  );
+
+  const existingHelper = helperRange.getValues();
+
+  const helperIsOurs =
+    existingHelper[0][0] === 'ศูนย์บริการ';
+
+  if (!helperIsOurs &&
+      existingHelper.some(row =>
+        row.some(cell => cell !== '' && cell !== null)
+      )) {
+    throw new Error(
+      'พื้นที่ X:AA มีข้อมูลอื่นอยู่ กรุณาเลือกคอลัมน์ช่วยใหม่'
+    );
+  }
+
+  helperRange.setValues(helper);
+
+  chartSheet.hideColumns(helperCol, 4);
+
+  SpreadsheetApp.flush();
+
+  // --------------------------------
+  // ลบเฉพาะกราฟครัวเรือนเดิม
+  // --------------------------------
+
+  chartSheet.getCharts().forEach(chart => {
+
+    const title = String(
+      chart.getOptions().get('title') || ''
+    );
+
+    if (
+      title === HOUSEHOLD_CHART_TITLE_1 ||
+      title === HOUSEHOLD_CHART_TITLE_2
+    ) {
+      chartSheet.removeChart(chart);
+    }
+
+  });
+
+  SpreadsheetApp.flush();
+
+  // --------------------------------
+  // หาตำแหน่งวางกราฟ
+  // --------------------------------
+
+  let nextRow = 2;
+
+  chartSheet.getCharts().forEach(chart => {
+
+    const info = chart.getContainerInfo();
+
+    const row = info.getAnchorRow() + 26;
+
+    nextRow = Math.max(nextRow, row);
+
+  });
+
+  // --------------------------------
+  // กราฟที่ 1
+  // เป้าหมายเทียบกับสำรวจ
+  // --------------------------------
+
+  const chart1 = chartSheet.newChart()
+
+    .setChartType(Charts.ChartType.COLUMN)
+
+    .addRange(
+      chartSheet.getRange(1, helperCol, 8, 3)
+    )
+
+    .setNumHeaders(1)
+
+    .setOption(
+      'title',
+      HOUSEHOLD_CHART_TITLE_1
+    )
+
+    .setOption(
+      'width',
+      1100
+    )
+
+    .setOption(
+      'height',
+      450
+    )
+
+    .setOption(
+      'legend',
+      { position: 'top' }
+    )
+
+    .setOption(
+      'hAxis',
+      { title: 'ศูนย์บริการสาธารณสุข' }
+    )
+
+    .setOption(
+      'vAxis',
+      {
+        title: 'จำนวนครัวเรือน',
+        minValue: 0
+      }
+    )
+
+    .setPosition(nextRow, 1, 0, 0)
+
+    .build();
+
+  chartSheet.insertChart(chart1);
+
+  // --------------------------------
+  // กราฟที่ 2
+  // ร้อยละความครอบคลุม
+  // --------------------------------
+
+  const chart2 = chartSheet.newChart()
+
+    .setChartType(Charts.ChartType.BAR)
+
+    .addRange(
+      chartSheet.getRange(1, helperCol, 8, 1)
+    )
+
+    .addRange(
+      chartSheet.getRange(1, helperCol + 3, 8, 1)
+    )
+
+    .setNumHeaders(1)
+
+    .setOption(
+      'title',
+      HOUSEHOLD_CHART_TITLE_2
+    )
+
+    .setOption(
+      'width',
+      1100
+    )
+
+    .setOption(
+      'height',
+      450
+    )
+
+    .setOption(
+      'legend',
+      { position: 'none' }
+    )
+
+    .setOption(
+      'hAxis',
+      {
+        title: 'ร้อยละความครอบคลุม',
+        format: '0.00%',
+        minValue: 0
+      }
+    )
+
+    .setPosition(nextRow + 25, 1, 0, 0)
+
+    .build();
+
+  chartSheet.insertChart(chart2);
+
+  SpreadsheetApp.flush();
+
+  Logger.log(
+    'สร้างกราฟครัวเรือนสำเร็จ จำนวน 2 กราฟ'
+  );
+}
+
+
+function appendSafe_(sheet, rowObj) {
+  appendManySafe_(sheet, [rowObj]);
+}
+
+
+/************************************************************
+ * REBUILD SUMMARY_AUTO + CHARTS_AUTO (RUN MANUALLY)
+ * หลังวางโค้ดและบันทึก ให้เลือกฟังก์ชันนี้แล้วกด Run 1 ครั้ง
+ ************************************************************/
+function rebuildSummaryAndChartsNow() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    throw new Error('ระบบกำลังประมวลผลอยู่ กรุณารอสักครู่แล้วลองใหม่');
+  }
+
+  try {
+    Logger.log('เริ่มสร้าง SUMMARY_AUTO');
+    buildSummaryAndDashboardCore_();
+    SpreadsheetApp.flush();
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const summary = ss.getSheetByName('SUMMARY_AUTO');
+    if (!summary || summary.getLastRow() < 2) {
+      throw new Error('SUMMARY_AUTO ยังไม่มีข้อมูล กรุณาตรวจสอบว่าชีตชุมชนมีข้อมูลและชื่อชีตตรงกับคอลัมน์ชุมชน');
+    }
+
+    Logger.log('สร้าง SUMMARY_AUTO แล้ว จำนวน ' + summary.getLastRow() + ' แถว');
+    Logger.log('เริ่มสร้าง CHARTS_AUTO');
+    createHouseholdCharts_();
+    SpreadsheetApp.flush();
+
+    const charts = ss.getSheetByName('CHARTS_AUTO');
+    Logger.log('สร้าง CHARTS_AUTO แล้ว จำนวนกราฟ ' + (charts ? charts.getCharts().length : 0));
+    Logger.log('เสร็จสมบูรณ์: SUMMARY_AUTO และ CHARTS_AUTO');
+  } catch (err) {
+    Logger.log('REBUILD ERROR: ' + (err.stack || err));
+    throw err;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/******************** UPDATE / GET HOUSE ********************/
+/* ลบแถวของบ้านหลังหนึ่งออกจากชีต (ใช้ร่วมกับลบและแก้ไข) คืนจำนวนแถวที่ลบ */
+function deleteHouseRows_(ss, centerName, communityName, addrNo) {
+  let total = 0;
+  [centerName, communityName].forEach(function(name) {
+    if (!name) return;
+    const sheet = ss.getSheetByName(name);
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const lastCol = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastCol)
+      .getDisplayValues()[0].map(function(h) { return String(h).trim(); });
+    const ci = headers.indexOf('ชุมชน');
+    const hi = headers.indexOf('บ้านเลขที่');
+    if (ci === -1 || hi === -1) return;
+    const vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getDisplayValues();
+    const delRows = [];
+    vals.forEach(function(r, i) {
+      const comOk = String(r[ci]).trim() === communityName;
+      const houseOk = formatHouseNo_(r[hi]) === addrNo;
+      if (comOk && houseOk) delRows.push(i + 2);
+    });
+    delRows.sort(function(a, b) { return b - a; }).forEach(function(ro) {
+      sheet.deleteRow(ro);
+    });
+    total += delRows.length;
+  });
+  return total;
+}
+
+/* ดึงข้อมูลบ้านหลังหนึ่ง คืนรูป payload เดียวกับที่หน้าเว็บส่ง */
+function getHouseData_(data) {
+  const centerName = safe_(data.centerName || data.center);
+  const communityName = safe_(data.communityName || data.community);
+  const addrNo = safe_(data.addrNo);
+  if (!centerName || !communityName || !addrNo) {
+    return output_('ข้อมูลไม่ครบ (ต้องมีศูนย์ ชุมชน บ้านเลขที่)');
+  }
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(communityName) || ss.getSheetByName(centerName);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return output_('ไม่พบข้อมูลบ้านเลขที่ ' + addrNo);
+  }
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol)
+    .getDisplayValues()[0].map(function(h) { return String(h).trim(); });
+  const ci = headers.indexOf('ชุมชน');
+  const hi = headers.indexOf('บ้านเลขที่');
+  if (ci === -1 || hi === -1) {
+    return output_('ชีตยังไม่มีโครงข้อมูลที่อ่านได้');
+  }
+  const vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getDisplayValues();
+  const rows = [];
+  vals.forEach(function(r) {
+    if (String(r[ci]).trim() === communityName && formatHouseNo_(r[hi]) === addrNo) {
+      const o = {};
+      headers.forEach(function(h, i) { o[h] = r[i]; });
+      rows.push(o);
+    }
+  });
+  if (!rows.length) {
+    return output_('ไม่พบข้อมูลบ้านเลขที่ ' + addrNo);
+  }
+  const first = rows[0];
+  const gv = function(row, k) { return row[k] !== undefined ? String(row[k]) : ''; };
+  const g = function(k) { return gv(first, k); };
+  let animalType = g('ประเภทสัตว์');
+  let otherAnimalType = g('ชนิดสัตว์ (อื่น)');
+  if (animalType.indexOf('อื่นๆ (') === 0 && animalType.slice(-1) === ')') {
+    otherAnimalType = otherAnimalType || animalType.slice(5, -1);
+    animalType = 'อื่นๆโปรดระบุ';
+  }
+  const pets = rows.map(function(r) {
+    return {
+      no: gv(r, 'ลำดับสัตว์'),
+      name: gv(r, 'ชื่อสัตว์') === 'ไม่ระบุ' ? '' : gv(r, 'ชื่อสัตว์'),
+      gender: gv(r, 'เพศ') || 'ไม่ระบุ',
+      ageYear: gv(r, 'อายุ (ปี)'),
+      ageMonth: gv(r, 'อายุ (เดือน)'),
+      color: gv(r, 'สี / ตำหนิ'),
+      sterilization: gv(r, 'สถานะทำหมัน') || 'ยังไม่ทำหมัน',
+      contraceptiveDate: gv(r, 'วันที่ฉีดยาคุม'),
+      contraceptiveVet: gv(r, 'สัตวแพทย์ผู้ฉีดยาคุม'),
+      rabies: gv(r, 'สถานะวัคซีนพิษสุนัขบ้า') || 'ไม่เคยฉีดวัคซีนพิษสุนัขบ้า',
+      rabiesDate: gv(r, 'วันที่ฉีดวัคซีน'),
+      rabiesVet: gv(r, 'สัตวแพทย์ผู้ฉีดวัคซีน'),
+      raisingStyle: gv(r, 'ลักษณะการเลี้ยง') || 'เลี้ยงในพื้นที่จำกัดตลอดเวลา',
+      raisingLocation: gv(r, 'สถานที่เลี้ยง') || 'บ้านพักอาศัย',
+      photoUrl: gv(r, 'ลิงก์รูปสัตว์')
+    };
+  });
+  const hasPets = pets.some(function(p) { return p.name || p.ageYear || p.ageMonth || p.photoUrl; });
+  const coords = g('พิกัดที่เลือก').split(',');
+  const record = {
+    centerName: centerName,
+    community: communityName,
+    animalType: animalType,
+    otherAnimalType: otherAnimalType,
+    otherAnimalQty: g('จำนวนสัตว์ (อื่น)'),
+    ownerName: g('ชื่อเจ้าของสัตว์') === 'ไม่ระบุ' ? '' : g('ชื่อเจ้าของสัตว์'),
+    recorderName: g('ผู้บันทึก'),
+    recorderRole: g('ตำแหน่ง'),
+    citizenId: g('เลขบัตรประชาชน'),
+    phone: g('เบอร์โทรศัพท์มือถือ'),
+    homePhone: g('เบอร์โทรศัพท์บ้าน'),
+    raisingArea: g('พื้นที่การเลี้ยง'),
+    address: {
+      addrNo: g('บ้านเลขที่'),
+      road: g('ถนน'),
+      soi: g('ซอย'),
+      subdistrict: g('ตำบล') || 'ในเมือง',
+      district: g('อำเภอ') || 'เมือง',
+      province: g('จังหวัด') || 'อุบลราชธานี'
+    },
+    houseLocation: {
+      latitude: (coords[0] || '').trim(),
+      longitude: (coords[1] || '').trim(),
+      status: 'surveyed'
+    },
+    ownerPhotoUrl: g('ลิงก์รูปเจ้าของ'),
+    pets: hasPets ? pets : [],
+    existingPhotos: {
+      owner: g('ลิงก์รูปเจ้าของ'),
+      pets: pets.map(function(p) { return p.photoUrl; })
+    }
+  };
+  return output_({found: true, rows: rows.length, record: record}, true);
 }
