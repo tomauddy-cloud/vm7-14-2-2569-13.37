@@ -21,7 +21,7 @@ const MASTER_HEADERS = [
   "เบอร์โทรศัพท์บ้าน","บ้านเลขที่","ถนน","ซอย",
   "ตำบล","อำเภอ","จังหวัด",
   "พิกัดที่เลือก",
-  "ผู้บันทึก","ตำแหน่ง",
+  "ผู้บันทึก","ตำแหน่ง","เลขบัตรผู้บันทึก",
   "ลิงก์รูปเจ้าของ","ลิงก์รูปสัตว์"
 ];
 
@@ -53,6 +53,10 @@ function doPost(e) {
 
     if (data && data.action === 'getHouse') {
       return getHouseData_(data);
+    }
+
+    if (data && data.action === 'getSurveyorStats') {
+      return getSurveyorStats_(data);
     }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -458,6 +462,7 @@ function buildRowObject_(
 
     "ผู้บันทึก": pick_(data.recorderName),
     "ตำแหน่ง": pick_(data.recorderRole),
+    "เลขบัตรผู้บันทึก": pick_(data.surveyorId),
 
     "ลิงก์รูปเจ้าของ": ownerPhotoUrl || '',
     "ลิงก์รูปสัตว์": petPhotoUrl || ''
@@ -2182,6 +2187,7 @@ function getHouseData_(data) {
     ownerName: g('ชื่อเจ้าของสัตว์') === 'ไม่ระบุ' ? '' : g('ชื่อเจ้าของสัตว์'),
     recorderName: g('ผู้บันทึก'),
     recorderRole: g('ตำแหน่ง'),
+    surveyorId: g('เลขบัตรผู้บันทึก'),
     citizenId: g('เลขบัตรประชาชน'),
     phone: g('เบอร์โทรศัพท์มือถือ'),
     homePhone: g('เบอร์โทรศัพท์บ้าน'),
@@ -2207,4 +2213,44 @@ function getHouseData_(data) {
     }
   };
   return output_({found: true, rows: rows.length, record: record}, true);
+}
+
+/******************** SURVEYOR STATS ********************/
+/* นับบ้านเลขที่ที่ไม่ซ้ำของเลขบัตรผู้สำรวจ จากทุกชีต (ตัดชีตสรุปออก) */
+function getSurveyorStats_(data) {
+  const sid = String(safe_(data.recorderName)).replace(/\s+/g, ' ').trim();
+  if (!sid) {
+    return output_('กรุณาระบุชื่อ-นามสกุลผู้บันทึก');
+  }
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const skip = ['SUMMARY_AUTO', 'DASHBOARD_AUTO', 'CHARTS_AUTO'];
+  const seen = {};
+  ss.getSheets().forEach(function(sheet) {
+    const name = sheet.getName();
+    if (skip.indexOf(name) >= 0) return;
+    if (sheet.getLastRow() < 2) return;
+    const lastCol = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastCol)
+      .getDisplayValues()[0].map(function(h) { return String(h).trim(); });
+    const ii = headers.indexOf('ผู้บันทึก');
+    const ci = headers.indexOf('ชุมชน');
+    const hi = headers.indexOf('บ้านเลขที่');
+    if (ii === -1 || ci === -1 || hi === -1) return;
+    const vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getDisplayValues();
+    vals.forEach(function(r) {
+      if (String(r[ii]).replace(/\s+/g, ' ').trim() !== sid) return;
+      const community = String(r[ci]).trim();
+      const addrNo = formatHouseNo_(r[hi]);
+      if (!community || !addrNo) return;
+      seen[community + '|' + addrNo] = community;
+    });
+  });
+  const houses = Object.keys(seen).map(function(k) {
+    const p = k.split('|');
+    return {community: p[0], addrNo: p[1]};
+  });
+  houses.sort(function(a, b) {
+    return a.community < b.community ? -1 : (a.community > b.community ? 1 : (a.addrNo < b.addrNo ? -1 : 1));
+  });
+  return output_({totalHouses: houses.length, houses: houses}, true);
 }
