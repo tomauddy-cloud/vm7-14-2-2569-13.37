@@ -1508,10 +1508,6 @@ async function deleteSelectedHouseMarker() {
     }
     const passcode = prompt('กรุณาใส่รหัสยืนยันเพื่อลบข้อมูลบ้านเลขที่ ' + addrNo + '\n(ลบทั้งหมุดบนแผนที่และข้อมูลในชีต)');
     if (passcode === null) return;
-    if (passcode.trim() !== 'babydog4321') {
-        setHouseMapMessage('รหัสไม่ถูกต้อง ไม่สามารถลบหมุดได้');
-        return;
-    }
     setHouseMapMessage('กำลังลบข้อมูลบ้านเลขที่ ' + addrNo + ' ในชีต...');
     try {
         const res = await fetch(GAS_URL, {
@@ -1539,7 +1535,7 @@ async function deleteSelectedHouseMarker() {
         document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
         selectedHouseKey = null;
         showAllHouseMarkers();
-        setHouseMapMessage('✅ ' + result.message);
+        setHouseMapMessage('✅ ลบข้อมูลบ้านเลขที่ ' + addrNo);
     } catch (err) {
         console.error(err);
         setHouseMapMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ หมุดและข้อมูลยังอยู่ กรุณาลองใหม่');
