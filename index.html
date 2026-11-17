@@ -1073,8 +1073,6 @@ button { min-height: 42px; touch-action: manipulation; }
 <script>
 /* ตั้ง pattern ผ่าน JS (ห้ามใส่ {} หรือ [] ใน attribute ของ HTML ตรง ๆ เพราะ Perchance จะแปลเป็นโค้ด) */
 document.getElementById('citizenId').setAttribute('pattern', '\\d{13}');
-document.getElementById('phone').setAttribute('pattern', '\\d{10}');
-document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 document.getElementById('surveyorId').setAttribute('pattern', '\\d{13}');
 document.getElementById('recorderRole').addEventListener('change', function() {
     try {
@@ -1086,6 +1084,8 @@ document.getElementById('recorderRole').addEventListener('change', function() {
         }
     } catch (e) {}
 });
+document.getElementById('phone').setAttribute('pattern', '\\d{10}');
+document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 
 
 /* =====================================================
