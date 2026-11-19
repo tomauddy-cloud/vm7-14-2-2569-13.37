@@ -835,15 +835,6 @@ button { min-height: 42px; touch-action: manipulation; }
 
 </select>
 
-<label>เลขบัตรประชาชนผู้สำรวจ (13 หลัก, จำไว้ในเครื่อง)</label>
-
-<input
-    type="text"
-    id="surveyorId"
-    maxlength="13"
-    minlength="13"
-    placeholder="กรอกครั้งเดียว ระบบจะจำไว้ให้">
-
 <label>
 หมายเลขบัตรประชาชน เจ้าของสัตว์เลี้ยง (13 หลัก)
 </label>
@@ -1073,17 +1064,7 @@ button { min-height: 42px; touch-action: manipulation; }
 <script>
 /* ตั้ง pattern ผ่าน JS (ห้ามใส่ {} หรือ [] ใน attribute ของ HTML ตรง ๆ เพราะ Perchance จะแปลเป็นโค้ด) */
 document.getElementById('citizenId').setAttribute('pattern', '\\d{13}');
-document.getElementById('surveyorId').setAttribute('pattern', '\\d{13}');
-document.getElementById('recorderRole').addEventListener('change', function() {
-    try {
-        if (this.value === 'เจ้าของสัตว์เลี้ยง') {
-            const sid = (document.getElementById('surveyorId').value || '').trim();
-            if (/^\d{13}$/.test(sid)) {
-                document.getElementById('citizenId').value = sid;
-            }
-        }
-    } catch (e) {}
-});
+
 document.getElementById('phone').setAttribute('pattern', '\\d{10}');
 document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 
@@ -1268,11 +1249,6 @@ function openForm(center) {
 
     loadCommunities(center);
 
-    /* จำเลขผู้สำรวจ: กรอกไว้ครั้งก่อนดึงมาใส่ให้ */
-    try {
-        const __sid = localStorage.getItem('animalSurveyorId') || '';
-        if (__sid) document.getElementById('surveyorId').value = __sid;
-    } catch (e) {}
 
     /* เตรียมแผนที่หลังเปิดหน้าแบบสำรวจ */
     setTimeout(initHouseMap, 120);
@@ -2259,19 +2235,7 @@ document
     }
 );
 
-document
-.getElementById('surveyorId')
-.addEventListener(
-    'input',
-    function() {
 
-        this.value =
-            this.value.replace(
-                /[^0-9]/g,
-                ''
-            );
-    }
-);
 
 
 /* =====================================================
@@ -2332,22 +2296,6 @@ document
         }
 
 
-        /* ===============================
-           เลขผู้สำรวจ (ไม่บังคับ)
-        =============================== */
-
-        const surveyorIdEl =
-            document.getElementById('surveyorId');
-
-        if (surveyorIdEl.value && !/^\d{13}$/.test(surveyorIdEl.value)) {
-
-            alert(
-                'กรุณากรอกเลขบัตรประชาชนผู้สำรวจให้ครบ 13 หลัก หรือเว้นว่างไว้'
-            );
-
-            surveyorIdEl.focus();
-            return;
-        }
 
 
         /* ===============================
@@ -2771,11 +2719,6 @@ document
                     'recorderRole'
                 ).value,
 
-            surveyorId:
-                (document.getElementById(
-                    'surveyorId'
-                ).value || '').trim(),
-
             citizenId:
                 citizen.value,
 
@@ -2887,7 +2830,6 @@ document
                     cacheSurveyRecord(payload);
                     refreshRecordCache(payload);
                 }
-                try { if (payload.surveyorId) localStorage.setItem('animalSurveyorId', payload.surveyorId); } catch (e) {}
 
                 document.getElementById(
                     'status'
@@ -3608,7 +3550,6 @@ function fillSurveyForm(rec) {
         setPreview(q('.petPhotoPreview'), pet.photoUrl || pet.petPhotoBase64 || '');
     });
     document.getElementById('recorderName').value = rec.recorderName || '';
-    if (rec.surveyorId) document.getElementById('surveyorId').value = rec.surveyorId;
     setSelectValue(document.getElementById('recorderRole'), rec.recorderRole);
     document.getElementById('citizenId').value = rec.citizenId || '';
     document.getElementById('phone').value = rec.phone || '';
