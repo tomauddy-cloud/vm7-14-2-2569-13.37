@@ -8,6 +8,7 @@
 <style>
 
 
+
 @import url("https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap");
 
 :root {
@@ -574,6 +575,12 @@ button { min-height: 42px; touch-action: manipulation; }
 #statsPage { display: none; }
 #statsPage.page-hidden { display: none !important; }
 #statsPage.page-visible { display: block !important; }
+#vaccinePage { display: none; }
+#vaccinePage.page-hidden { display: none !important; }
+#vaccinePage.page-visible { display: block !important; }
+#adminPage { display: none; }
+#adminPage.page-hidden { display: none !important; }
+#adminPage.page-visible { display: block !important; }
 .center-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
 .center-actions .page-button { border: 1.5px solid var(--line); background: #fff; color: var(--brand-deep); }
 .center-actions .page-button:hover { border-color: var(--brand); background: var(--field); }
@@ -593,7 +600,36 @@ button { min-height: 42px; touch-action: manipulation; }
 .stat-top { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
 .stat-bar { height: 12px; border-radius: 999px; background: #e6eaf3; overflow: hidden; }
 .stat-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--brand)); }
+/* ===== ADD-ON v8: แจ้งเตือนวัคซีน + อนุมัติแก้ไข ===== */
+.vax-badge{display:inline-block;min-width:26px;padding:2px 8px;border-radius:999px;background:#c0392b;color:#fff;font-size:13px;font-weight:700;text-align:center}
+.vax-pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.vax-overdue{background:#fde2e2;color:#a31212;border:1px solid #f0a3a3}
+.vax-due7{background:#fff1d6;color:#8a5a00;border:1px solid #ecd27a}
+.vax-due30{background:#e8f4ff;color:#1d4e89;border:1px solid #a9cdf3}
+.vax-upcoming{background:#e9f7ef;color:#1e7e34;border:1px solid #a9dfbf}
+.vax-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+.vax-table th,.vax-table td{border:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:top}
+.vax-table th{background:var(--brand-deep);color:#fff;white-space:nowrap}
+.vax-table tr:nth-child(even) td{background:#f7f9ff}
+.pending-card{border:1px solid var(--line);border-left:4px solid #8e44ad;border-radius:12px;background:#fff;padding:12px;margin-top:10px}
+.pending-card.approved{border-left-color:#16a34a}
+.pending-card.rejected{border-left-color:#a33}
+.diff-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+.diff-table th,.diff-table td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+.diff-same{color:var(--muted)}
+.diff-changed{background:#fff8e6;font-weight:700}
+.admin-bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#editReasonBox{margin-top:12px;padding:12px;background:#f3eefc;border:1px dashed #8e44ad;border-radius:10px}
+#editReason{width:100%;min-height:70px;font:inherit;padding:10px;border-radius:8px;border:1.5px solid var(--line);box-sizing:border-box}
+#adminPasscode,#deletePasscode{font-family:system-ui,-apple-system,Arial,sans-serif !important;letter-spacing:3px;}
+#mapToast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-12px);z-index:9999;max-width:min(92vw,480px);padding:12px 16px;border-radius:12px;background:#1d2b70;color:#fff;font-weight:700;font-size:15px;box-shadow:0 10px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;text-align:center}
+#mapToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.rabies-due-hint{font-size:13px;color:#7a5b00;background:#fff8e6;border:1px solid #ecd27a;border-radius:8px;padding:6px 9px;margin-top:6px}
+
+
 </style>
+
+
 </head>
 <body>
 <header>
@@ -703,6 +739,12 @@ button { min-height: 42px; touch-action: manipulation; }
     <button type="button" class="page-button" onclick="openStats()">
         🏅 ผลงานรายบุคคล
     </button>
+    <button type="button" class="page-button" onclick="openVaccine()">
+        💉 เตือนครบรอบวัคซีน <span data-vax-count></span>
+    </button>
+    <button type="button" class="page-button" onclick="openAdmin()">
+        🛡️ อนุมัติแก้ไข
+    </button>
 </div>
 
 </div>
@@ -728,6 +770,11 @@ button { min-height: 42px; touch-action: manipulation; }
 
 <div id="editBanner" class="edit-banner" hidden>
 ✏️ <span id="editBannerText"></span>
+</div>
+<div id="editReasonBox" hidden>
+<label for="editReason">เหตุผลการแก้ไข (บังคับ — แอดมินจะเห็นเพื่อประกอบการอนุมัติ)</label>
+<textarea id="editReason" placeholder="เช่น แก้ชื่อสัตว์จาก ดำ เป็น แดง, เพิ่มวัคซีนเข็มล่าสุด"></textarea>
+<p class="house-map-help" style="margin:6px 0 0">⚠️ การแก้ไขจะไม่ทับข้อมูลจริงทันที ระบบจะส่งเป็นคำขอรออนุมัติก่อน</p>
 </div>
 
 <p
@@ -835,6 +882,8 @@ button { min-height: 42px; touch-action: manipulation; }
 
 </select>
 
+<input type="hidden" id="surveyorId">
+
 <label>
 หมายเลขบัตรประชาชน เจ้าของสัตว์เลี้ยง (13 หลัก)
 </label>
@@ -849,6 +898,9 @@ button { min-height: 42px; touch-action: manipulation; }
 <h3 style="margin-top:20px">
 ข้อมูลเจ้าของสัตว์
 </h3>
+
+<label>ชื่อเจ้าของสัตว์ (ชื่อ-นามสกุล)</label>
+<input type="text" id="ownerName" required>
 
 <div class="owner-photo-wrap">
 
@@ -887,7 +939,18 @@ button { min-height: 42px; touch-action: manipulation; }
   </div>
   <div id="houseMap" role="application" aria-label="แผนที่เลือกตำแหน่งบ้าน"></div>
   <div id="houseMapMessage" class="house-map-message" aria-live="polite">กำลังเตรียมแผนที่…</div>
+  <div id="deleteConfirmBox" hidden style="margin-top:10px;padding:12px;background:#fff;border:1px dashed #a33;border-radius:10px">
+    <div style="font-weight:700;color:#a33">ยืนยันลบ <span id="deleteConfirmAddr"></span></div>
+    <p class="house-map-help" style="margin:6px 0">หมุดรอสำรวจกดลบได้เลยไม่ต้องใส่รหัส ส่วนบ้านที่สำรวจแล้วต้องใส่รหัสก่อนลบ (ลบทั้งหมุดและข้อมูลในชีต)</p>
+    <label for="deletePasscode" style="margin-top:6px">รหัสยืนยันการลบ</label>
+    <input id="deletePasscode" type="password" inputmode="text" placeholder="กรอกรหัสแล้วกดยืนยันลบ" autocomplete="current-password">
+    <div class="house-map-actions">
+      <button type="button" onclick="confirmDeleteHouse()" style="background:#a33">ยืนยันลบ</button>
+      <button type="button" class="secondary" onclick="cancelDeleteHouse()">ยกเลิก</button>
+    </div>
+  </div>
   <div id="houseMapCoords" class="house-map-coords">ยังไม่ได้เลือกพิกัด</div>
+  <div id="mapToast" role="status" aria-live="polite"></div>
   <input type="hidden" id="houseLat" name="houseLat">
   <input type="hidden" id="houseLng" name="houseLng">
 </section>
@@ -1054,6 +1117,69 @@ button { min-height: 42px; touch-action: manipulation; }
 </main>
 </div>
 
+<div id="vaccinePage" class="page-hidden">
+<main>
+<button type="button" class="page-button back-button" onclick="backToCenter()">← กลับ</button>
+<h2>💉 เตือนครบรอบฉีดวัคซีนพิษสุนัขบ้า</h2>
+<p class="house-map-help">ระบบคำนวณวันครบกำหนดฉีดซ้ำ = วันที่ฉีดล่าสุด + 365 วัน สีแดง = เลยกำหนดแล้ว ควรตามฉีดซ้ำทันที</p>
+<section class="search-panel" aria-label="ตัวกรองวัคซีน">
+<label>ศูนย์บริการ</label>
+<select id="vaxCenter"></select>
+<label>ชุมชน</label>
+<select id="vaxCommunity"></select>
+<label>ขอบเขตแจ้งเตือน</label>
+<select id="vaxDays">
+<option value="7">ครบใน 7 วัน + เลยกำหนด</option>
+<option value="30" selected>ครบใน 30 วัน + เลยกำหนด</option>
+<option value="60">ครบใน 60 วัน + เลยกำหนด</option>
+<option value="90">ครบใน 90 วัน + เลยกำหนด</option>
+</select>
+<div class="house-map-actions">
+<button type="button" class="secondary" onclick="loadVaccineDue()">🔄 โหลดรายการ</button>
+<button type="button" class="secondary" onclick="enableVaxNotify()">🔔 เปิดแจ้งเตือนในเบราว์เซอร์</button>
+</div>
+</section>
+<p id="vaxMsg" class="house-map-message"></p>
+<div id="vaxSummary" class="house-map-message"></div>
+<div style="overflow-x:auto"><table class="vax-table" id="vaxTable" hidden>
+<thead><tr><th>สถานะ</th><th>ครบกำหนด</th><th>สัตว์</th><th>บ้าน / เจ้าของ</th><th>โทร</th><th>ฉีดล่าสุด</th></tr></thead>
+<tbody id="vaxBody"></tbody>
+</table></div>
+<div id="vaxCards"></div>
+</main>
+</div>
+
+<div id="adminPage" class="page-hidden">
+<main>
+<button type="button" class="page-button back-button" onclick="backToCenter()">← กลับ</button>
+<h2>🛡️ อนุมัติการแก้ไขข้อมูลบ้าน</h2>
+<p class="house-map-help">โหมดนี้สำหรับแอดมินเท่านั้น การแก้ไขจากอสม./เจ้าของสัตว์จะเข้าคิวรออนุมัติก่อน ไม่เขียนทับข้อมูลจริงจนกว่าจะกดอนุมัติ</p>
+<section class="search-panel" aria-label="เข้าสู่ระบบแอดมิน">
+<label>รหัสแอดมิน</label>
+<input id="adminPasscode" type="password" inputmode="text" placeholder="กรอกรหัสแอดมิน" autocomplete="current-password">
+<div class="admin-bar">
+<button type="button" onclick="loadPendingList()">📋 โหลดคิวรออนุมัติ</button>
+<button type="button" class="secondary" onclick="loadPendingList('all')">ดูทั้งหมด (รวมอนุมัติ/ตีกลับแล้ว)</button>
+<button type="button" class="secondary" onclick="adminLogout()">ออกจากโหมดแอดมิน</button>
+</div>
+<p class="house-map-help">รหัสจะจำไว้ในเครื่องนี้เท่านั้น (sessionStorage) ปิดแท็บแล้วต้องกรอกใหม่</p>
+</section>
+<p id="adminMsg" class="house-map-message"></p>
+<div id="pendingList"></div>
+<hr style="margin:22px 0;border:0;border-top:1px solid var(--line)">
+<h3>📤 สถานะคำขอของฉัน (ผู้ขอแก้ไขตรวจสอบเอง)</h3>
+<section class="search-panel" aria-label="สถานะคำขอ">
+<label>ชื่อผู้ขอ (ต้องตรงกับชื่อผู้บันทึกตอนส่งคำขอ)</label>
+<input id="myReqName" maxlength="100" placeholder="เช่น สมชาย ใจดี">
+<div class="house-map-actions">
+<button type="button" class="secondary" onclick="loadMyRequests()">ตรวจสอบสถานะ</button>
+</div>
+</section>
+<p id="myReqMsg" class="house-map-message"></p>
+<div id="myReqList"></div>
+</main>
+</div>
+
 <footer>
 © เทศบาลนครอุบลราชธานี |
 กองสาธารณสุขและสิ่งแวดล้อม |
@@ -1064,7 +1190,17 @@ button { min-height: 42px; touch-action: manipulation; }
 <script>
 /* ตั้ง pattern ผ่าน JS (ห้ามใส่ {} หรือ [] ใน attribute ของ HTML ตรง ๆ เพราะ Perchance จะแปลเป็นโค้ด) */
 document.getElementById('citizenId').setAttribute('pattern', '\\d{13}');
-
+document.getElementById('surveyorId').setAttribute('pattern', '\\d{13}');
+document.getElementById('recorderRole').addEventListener('change', function() {
+    try {
+        if (this.value === 'เจ้าของสัตว์เลี้ยง') {
+            const sid = (document.getElementById('surveyorId').value || '').trim();
+            if (/^\d{13}$/.test(sid)) {
+                document.getElementById('citizenId').value = sid;
+            }
+        }
+    } catch (e) {}
+});
 document.getElementById('phone').setAttribute('pattern', '\\d{10}');
 document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 
@@ -1074,7 +1210,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbwDgi0Xu0OAinssdE4Sp6p9SoANbvO_SmtofgT1gPs-QGgnC1T3O-6TSEGqW57hkNZk/exec";
+"https://script.google.com/macros/s/AKfycbzrrhlbRrsN7eVl2lMr2x7LGT1TqJa_shT_mflTODEwlR8uKyr9z3nCI_qaLJ2OxNJV/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -1249,6 +1385,11 @@ function openForm(center) {
 
     loadCommunities(center);
 
+    /* จำเลขผู้สำรวจ: กรอกไว้ครั้งก่อนดึงมาใส่ให้ */
+    try {
+        const __sid = localStorage.getItem('animalSurveyorId') || '';
+        if (__sid) document.getElementById('surveyorId').value = __sid;
+    } catch (e) {}
 
     /* เตรียมแผนที่หลังเปิดหน้าแบบสำรวจ */
     setTimeout(initHouseMap, 120);
@@ -1259,6 +1400,10 @@ function openForm(center) {
     if (__searchPageEl) { __searchPageEl.classList.remove('page-visible'); __searchPageEl.classList.add('page-hidden'); }
     var __statsPageEl = document.getElementById('statsPage');
     if (__statsPageEl) { __statsPageEl.classList.remove('page-visible'); __statsPageEl.classList.add('page-hidden'); }
+    var __vaxPageEl = document.getElementById('vaccinePage');
+    if (__vaxPageEl) { __vaxPageEl.classList.remove('page-visible'); __vaxPageEl.classList.add('page-hidden'); }
+    var __adminPageEl = document.getElementById('adminPage');
+    if (__adminPageEl) { __adminPageEl.classList.remove('page-visible'); __adminPageEl.classList.add('page-hidden'); }
     centerPage.classList.remove('page-visible');
     centerPage.classList.add('page-hidden');
 
@@ -1288,6 +1433,10 @@ function backToCenter() {
     if (__searchPageEl2) { __searchPageEl2.classList.remove('page-visible'); __searchPageEl2.classList.add('page-hidden'); }
     var __statsPageEl2 = document.getElementById('statsPage');
     if (__statsPageEl2) { __statsPageEl2.classList.remove('page-visible'); __statsPageEl2.classList.add('page-hidden'); }
+    var __vaxPageEl2 = document.getElementById('vaccinePage');
+    if (__vaxPageEl2) { __vaxPageEl2.classList.remove('page-visible'); __vaxPageEl2.classList.add('page-hidden'); }
+    var __adminPageEl2 = document.getElementById('adminPage');
+    if (__adminPageEl2) { __adminPageEl2.classList.remove('page-visible'); __adminPageEl2.classList.add('page-hidden'); }
     formPage.classList.remove('page-visible');
     formPage.classList.add('page-hidden');
 
@@ -1606,6 +1755,7 @@ function savePendingHouseMarker() {
     setHouseMapMessage('บันทึกหมุดบ้านเลขที่ ' + addrNo + ' เป็นสถานะยังไม่ได้สำรวจแล้ว');
 }
 
+function showMapToast(msg){ try{ var t=document.getElementById('mapToast'); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(window.__mapToastTimer); window.__mapToastTimer=setTimeout(function(){ t.classList.remove('show'); }, 5000); }catch(e){} }
 function removeLocalHouseMarker(kept, addrNo) {
     saveHouseMarkerRecords(kept);
     if (selectedHouseMarker && houseMap) {
@@ -1617,25 +1767,21 @@ function removeLocalHouseMarker(kept, addrNo) {
     document.getElementById('houseMapCoords').textContent = 'ยังไม่ได้เลือกพิกัด';
     selectedHouseKey = null;
     showAllHouseMarkers();
+    showMapToast('หมุดบ้านเลขที่ ' + addrNo + ' หายจากแผนที่แล้ว');
 }
 
 async function deleteSelectedHouseMarker() {
-    const centerId = document.getElementById('centerId').value;
-    const centerName = document.getElementById('centerName').value;
-    const communitySel = document.getElementById('communitySelect').value;
-    const records = getHouseMarkerRecords();
-    let key = selectedHouseKey;
-    let addrNo = '';
-    let targetCommunity = communitySel;
+    var centerId = document.getElementById('centerId').value;
+    var centerName = document.getElementById('centerName').value;
+    var communitySel = document.getElementById('communitySelect').value;
+    var records = getHouseMarkerRecords();
+    var key = selectedHouseKey;
+    var addrNo = '';
+    var targetCommunity = communitySel;
     if (key) {
-        const found = records.filter(function(r) { return r.key === key; })[0];
-        if (!found) {
-            selectedHouseKey = null;
-            key = '';
-        } else {
-            addrNo = found.addrNo;
-            targetCommunity = found.community;
-        }
+        var found = records.filter(function(r) { return r.key === key; })[0];
+        if (!found) { selectedHouseKey = null; key = ''; }
+        else { addrNo = found.addrNo; targetCommunity = found.community; }
     }
     if (!key) {
         if (!communitySel) { setHouseMapMessage('แตะเลือกหมุดบนแผนที่ หรือเลือกชุมชนแล้วกรอกบ้านเลขที่'); return; }
@@ -1644,44 +1790,46 @@ async function deleteSelectedHouseMarker() {
         key = [centerId, communitySel, addrNo].join('|');
         targetCommunity = communitySel;
     }
-    const kept = records.filter(function(r) { return r.key !== key; });
-    if (kept.length === records.length) {
-        setHouseMapMessage('ไม่พบหมุดบ้านเลขที่ ' + addrNo + ' ในชุมชนนี้ (อาจยังไม่ได้บันทึกหมุด)');
+    var kept = records.filter(function(r) { return r.key !== key; });
+    if (kept.length === records.length) { setHouseMapMessage('ไม่พบหมุดบ้านเลขที่ ' + addrNo + ' ในชุมชนนี้ (อาจยังไม่ได้บันทึกหมุด)'); return; }
+    var targetRec = records.filter(function(r) { return r.key === key; })[0];
+    var _isSurveyed = !!(targetRec && targetRec.status === 'surveyed');
+    window.__pendingDelete = { key: key, addrNo: addrNo, centerName: centerName, community: targetCommunity, kept: kept, needCode: _isSurveyed, surveyed: _isSurveyed };
+    var box = document.getElementById('deleteConfirmBox');
+    var addrEl = document.getElementById('deleteConfirmAddr');
+    if (addrEl) addrEl.textContent = 'บ้านเลขที่ ' + addrNo + (window.__pendingDelete.surveyed ? ' (มีข้อมูลในชีต)' : ' (หมุดรอสำรวจ)');
+    var passEl = document.getElementById('deletePasscode');
+    if (passEl) { passEl.value = ''; passEl.placeholder = window.__pendingDelete.needCode ? 'กรอกรหัสแล้วกดยืนยันลบ' : 'หมุดนี้ยังไม่มีข้อมูลในชีต กดยืนยันลบได้เลย'; }
+    if (box) box.hidden = false;
+    setHouseMapMessage(window.__pendingDelete.needCode ? 'กรอกรหัสในช่องด้านล่างแล้วกดยืนยันลบ (ลบทั้งหมุดและข้อมูลในชีต)' : 'กดยืนยันลบด้านล่างเพื่อลบหมุดรอสำรวจนี้');
+    if (box) box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+window.cancelDeleteHouse = function(){ window.__pendingDelete = null; var box = document.getElementById('deleteConfirmBox'); if(box) box.hidden = true; setHouseMapMessage('ยกเลิกการลบแล้ว'); };
+window.confirmDeleteHouse = async function(){
+    var p = window.__pendingDelete;
+    if(!p){ setHouseMapMessage('กรุณากดปุ่มลบหมุดก่อน'); return; }
+    var passcode = (document.getElementById('deletePasscode').value || '').trim();
+    if(!p.surveyed){
+        removeLocalHouseMarker(p.kept, p.addrNo);
+        document.getElementById('deleteConfirmBox').hidden = true; window.__pendingDelete = null;
+        setHouseMapMessage('ลบหมุดบ้านเลขที่ ' + p.addrNo + ' แล้ว');
+        try{ alert('ลบหมุดบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว'); }catch(e){}
+        showMapToast('ลบหมุดบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว');
         return;
     }
-    const targetRec = records.filter(function(r) { return r.key === key; })[0];
-    if (!targetRec || targetRec.status !== 'surveyed') {
-        /* หมุดรอสำรวจยังไม่มีข้อมูลในชีต ลบแค่ในเครื่องได้เลย ไม่ต้องใส่รหัส */
-        if (!confirm('ลบหมุดบ้านเลขที่ ' + addrNo + ' หรือไม่ (บ้านนี้ยังไม่มีข้อมูลในชีต)')) return;
-        removeLocalHouseMarker(kept, addrNo);
-        setHouseMapMessage('ลบหมุดบ้านเลขที่ ' + addrNo + ' แล้ว');
-        return;
-    }
-    const passcode = prompt('กรุณาใส่รหัสยืนยันเพื่อลบข้อมูลบ้านเลขที่ ' + addrNo + '\n(ลบทั้งหมุดบนแผนที่และข้อมูลในชีต)');
-    if (passcode === null) return;
-    setHouseMapMessage('กำลังลบข้อมูลบ้านเลขที่ ' + addrNo + ' ในชีต...');
+    if(!passcode){ setHouseMapMessage('กรุณากรอกรหัสยืนยันก่อนลบ (รหัสเดียวกับรหัสแอดมิน)'); document.getElementById('deletePasscode').focus(); return; }
+    setHouseMapMessage('กำลังลบข้อมูลบ้านเลขที่ ' + p.addrNo + ' ในชีต...');
     try {
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'deleteHouse',
-                passcode: passcode.trim(),
-                centerName: centerName,
-                community: targetCommunity,
-                addrNo: addrNo
-            })
-        });
-        const result = JSON.parse(await res.text());
-        if (result.status !== 'success') {
-            setHouseMapMessage('ลบในชีตไม่สำเร็จ: ' + (result.message || 'ไม่ทราบสาเหตุ') + ' (หมุดยังอยู่)');
-            return;
-        }
-        removeLocalHouseMarker(kept, addrNo);
-        setHouseMapMessage('✅ ลบข้อมูลบ้านเลขที่ ' + addrNo);
-    } catch (err) {
-        console.error(err);
-        setHouseMapMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ หมุดและข้อมูลยังอยู่ กรุณาลองใหม่');
-    }
+        var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteHouse', passcode: passcode, centerName: p.centerName, community: p.community, addrNo: p.addrNo }) });
+        var result = JSON.parse(await res.text());
+        if (result.status !== 'success') { setHouseMapMessage('ลบในชีตไม่สำเร็จ: ' + (result.message || 'ไม่ทราบสาเหตุ') + ' (หมุดยังอยู่)'); return; }
+        try{ sessionStorage.setItem('animalSurveyAdminCode', passcode); }catch(e){}
+        removeLocalHouseMarker(p.kept, p.addrNo);
+        document.getElementById('deleteConfirmBox').hidden = true; window.__pendingDelete = null;
+        setHouseMapMessage('ลบข้อมูลบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว');
+        try{ alert('ลบข้อมูลบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว'); }catch(e){}
+        showMapToast('ลบข้อมูลบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว');
+    } catch (err) { console.error(err); setHouseMapMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ หมุดและข้อมูลยังอยู่ กรุณาลองใหม่'); }
 }
 
 function rememberHouseMarker(status) {
@@ -2132,6 +2280,23 @@ animalType.addEventListener(
             petQtyBox.style.display =
                 'none';
 
+        } else if (type === 'ไม่มี' || !type) {
+
+            otherBox.style.display =
+                'none';
+
+            otherType.required = false;
+            otherQty.required = false;
+
+            otherType.value = '';
+            otherQty.value = '';
+
+            petQty.value = 0;
+            petList.innerHTML = '';
+
+            petQtyBox.style.display =
+                'none';
+
         } else {
 
             otherBox.style.display =
@@ -2235,7 +2400,19 @@ document
     }
 );
 
+document
+.getElementById('surveyorId')
+.addEventListener(
+    'input',
+    function() {
 
+        this.value =
+            this.value.replace(
+                /[^0-9]/g,
+                ''
+            );
+    }
+);
 
 
 /* =====================================================
@@ -2277,6 +2454,17 @@ document
             return;
         }
 
+        const __ownerNameEl = document.getElementById('ownerName');
+        if (__ownerNameEl && !__ownerNameEl.value.trim()) {
+
+            alert(
+                'กรุณากรอก ชื่อเจ้าของสัตว์'
+            );
+
+            __ownerNameEl.focus();
+            return;
+        }
+
 
         /* ===============================
            เบอร์โทร
@@ -2296,6 +2484,22 @@ document
         }
 
 
+        /* ===============================
+           เลขผู้สำรวจ (ไม่บังคับ)
+        =============================== */
+
+        const surveyorIdEl =
+            document.getElementById('surveyorId');
+
+        if (surveyorIdEl.value && !/^\d{13}$/.test(surveyorIdEl.value)) {
+
+            alert(
+                'กรุณากรอกเลขบัตรประชาชนผู้สำรวจให้ครบ 13 หลัก หรือเว้นว่างไว้'
+            );
+
+            surveyorIdEl.focus();
+            return;
+        }
 
 
         /* ===============================
@@ -2354,7 +2558,8 @@ document
            รูปเจ้าของ
         =============================== */
 
-        if (!ownerPhoto.files.length) {
+        const __isEditPhoto = !!(window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.owner);
+        if (!ownerPhoto.files.length && !__isEditPhoto) {
 
             alert(
                 'กรุณาอัปโหลดรูปโปรไฟล์เจ้าของสัตว์เลี้ยง'
@@ -2372,12 +2577,10 @@ document
         const type =
             animalType.value;
 
-        if (
-            type === 'สุนัขมีเจ้าของ' ||
-            type === 'แมวมีเจ้าของ' ||
-            type === 'สุนัขไม่มีเจ้าของ' ||
-            type === 'แมวไม่มีเจ้าของ'
-        ) {
+        const __needDetailTypes = ['สุนัขมีเจ้าของ','แมวมีเจ้าของ','สุนัขไม่มีเจ้าของ','แมวไม่มีเจ้าของ','โค','เป็ด','ไก่','สุกร','นก','แพะ','ม้า'];
+        const __needDetail = __needDetailTypes.indexOf(type) !== -1;
+
+        if (__needDetail) {
 
             const cards =
                 document.querySelectorAll(
@@ -2408,7 +2611,8 @@ document
                     );
 
 
-                if (!photo.files.length) {
+                const __oldPetPhoto = window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.pets && window.__surveyEdit.existingPhotos.pets[i];
+                if (!photo.files.length && !__oldPetPhoto) {
 
                     alert(
                         `สัตว์ตัวที่ ${i + 1} : กรุณาอัปโหลดรูปภาพ`
@@ -2627,11 +2831,12 @@ document
         =============================== */
 
         const ownerBase64 =
+            ownerPhoto.files[0] ?
             await compressImage(
                 ownerPhoto.files[0],
                 1024,
                 0.8
-            );
+            ) : '';
 
 
         /* ===============================
@@ -2709,7 +2914,9 @@ document
                 ).value,
 
             ownerName:
-                recorder.value,
+                (document.getElementById(
+                    'ownerName'
+                ).value || '').trim() || recorder.value,
 
             recorderName:
                 recorder.value,
@@ -2718,6 +2925,11 @@ document
                 document.getElementById(
                     'recorderRole'
                 ).value,
+
+            surveyorId:
+                (document.getElementById(
+                    'surveyorId'
+                ).value || '').trim(),
 
             citizenId:
                 citizen.value,
@@ -2781,10 +2993,13 @@ document
                 pets
         };
 
-        /* โหมดแก้ไข: ส่งแบบ update + แนบรูปเดิมที่ไม่ได้เปลี่ยน */
+        /* โหมดแก้ไข v8: ส่งเป็นคำขอรออนุมัติ ไม่เขียนทับทันที */
         if (window.__surveyEdit) {
-            payload.action = 'updateHouse';
+            payload.action = 'submitEditRequest';
             payload.existingPhotos = window.__surveyEdit.existingPhotos || null;
+            payload.requestedBy = (document.getElementById('recorderName').value || '').trim();
+            payload.editReason = (document.getElementById('editReason').value || '').trim();
+            if (!payload.editReason) { alert('กรุณากรอกเหตุผลการแก้ไขก่อนส่ง (แอดมินใช้ประกอบการอนุมัติ)'); document.getElementById('editReason').focus(); return; }
         }
 
 
@@ -2796,6 +3011,8 @@ document
             'status'
         ).innerText =
             '⏳ กำลังบันทึกข้อมูล...';
+        const __saveBtn = document.getElementById('saveButton');
+        if (__saveBtn) __saveBtn.disabled = true;
 
 
         try {
@@ -2830,15 +3047,16 @@ document
                     cacheSurveyRecord(payload);
                     refreshRecordCache(payload);
                 }
+                try { if (payload.surveyorId) localStorage.setItem('animalSurveyorId', payload.surveyorId); } catch (e) {}
 
                 document.getElementById(
                     'status'
                 ).innerText =
-                    window.__surveyEdit ? 'แก้ไขข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ';
+                    window.__surveyEdit ? 'ส่งคำขอแก้ไขแล้ว รอแอดมินอนุมัติ' : 'บันทึกข้อมูลสำเร็จ';
 
 
                 alert(
-                    window.__surveyEdit ? 'แก้ไขข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ'
+                    window.__surveyEdit ? 'ส่งคำขอแก้ไขแล้ว รอแอดมินอนุมัติ' : 'บันทึกข้อมูลสำเร็จ'
                 );
 
 
@@ -2916,7 +3134,7 @@ document
             let __queued = false;
             try {
                 if (typeof queueOfflineRecord === 'function') {
-                    payload.action = 'updateHouse';
+                    if (payload.action !== 'submitEditRequest') payload.action = 'updateHouse';
                     __queued = queueOfflineRecord(payload);
                     if (typeof updateOutboxBadge === 'function') updateOutboxBadge();
                 }
@@ -2927,7 +3145,10 @@ document
             ).innerText =
                 __queued
                     ? '📥 เน็ตไม่พร้อม เก็บลงกล่องขาออกแล้ว (' + outboxCount() + ' รายการ) กลับมามีเน็ตแล้วกดส่งที่หน้าค้นหา / แก้ไขข้อมูล'
-                    : '❌ ไม่สามารถเชื่อมต่อ Google Script';
+                    : '❌ ไม่สามารถเชื่อมต่อ Google Script (ถ้ามีรูปเยอะ ที่เก็บในเครื่องอาจเต็ม — ลองส่งทีละหลังหรือลดจำนวนสัตว์/รูป)';
+        } finally {
+            const __saveBtn2 = document.getElementById('saveButton');
+            if (__saveBtn2) __saveBtn2.disabled = false;
         }
 
     }
@@ -3052,7 +3273,7 @@ const RECORD_CACHE_KEY = 'animalSurveyCache_v1';
 /* ---------- เปลี่ยนหน้า ---------- */
 
 function showPage(name) {
-    ['centerPage', 'formPage', 'searchPage', 'statsPage'].forEach(function(id) {
+    ['centerPage', 'formPage', 'searchPage', 'statsPage', 'vaccinePage', 'adminPage'].forEach(function(id) {
         const el = document.getElementById(id);
         if (!el) return;
         if (id === name) {
@@ -3155,8 +3376,8 @@ async function syncOutbox() {
     const remain = [];
     for (const item of box) {
         try {
-            /* ส่งแบบ updateHouse ทำให้ส่งซ้ำไม่เกิดแถวเบิ้ล */
-            item.payload.action = 'updateHouse';
+            /* ส่งแบบ updateHouse ทำให้ส่งซ้ำไม่เกิดแถวเบิ้ล (แต่ถ้าเป็นคำขอแก้ไขให้คง action เดิม) */
+            if (item.payload.action !== 'submitEditRequest') item.payload.action = 'updateHouse';
             const res = await fetch(GAS_URL, {method: 'POST', body: JSON.stringify(item.payload)});
             const result = JSON.parse(await res.text());
             if (result.status !== 'success') { remain.push(item); }
@@ -3221,10 +3442,20 @@ function cacheSurveyRecord(payload, photoUrls) {
         const key = houseKeyOf(payload.centerId, payload.community, addrNo);
         const box = loadRecordCache();
         const stored = JSON.parse(JSON.stringify(payload));
+        /* ไม่เก็บ base64 ลง localStorage กันเต็ม (รูปจริงอยู่บน Drive / โหลดใหม่จาก server) */
+        delete stored.ownerPhotoBase64;
+        delete stored.ownerPhoto;
+        delete stored.ownerImage;
+        (stored.pets || []).forEach(function(pet) {
+            delete pet.petPhotoBase64;
+            delete pet.photoBase64;
+            delete pet.image;
+            delete pet.photo;
+        });
         if (photoUrls) {
-            stored.ownerPhotoBase64 = '';
-            (stored.pets || []).forEach(function(pet) { pet.petPhotoBase64 = ''; });
             stored.existingPhotos = photoUrls;
+        } else if (!stored.existingPhotos && payload.existingPhotos) {
+            stored.existingPhotos = payload.existingPhotos;
         }
         box[key] = {savedAt: new Date().toISOString(), record: stored};
         saveRecordCache(box);
@@ -3444,7 +3675,7 @@ async function loadSurveyorFromServer() {
         const d = (result && typeof result.message === 'object') ? result.message : null;
         if (!result || result.status !== 'success' || !d || typeof d.totalHouses !== 'number') {
             const msg = (result && typeof result.message === 'string') ? result.message : 'ไม่ทราบสาเหตุ';
-            setStatMsg('โหลดไม่สำเร็จ: ' + msg);
+            setStatMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return 'โหลดไม่สำเร็จ: ' + raw; })(msg));
             return;
         }
         const seen = {};
@@ -3465,14 +3696,17 @@ function enterEditMode(rec, key) {
     document.getElementById('editBanner').hidden = false;
     document.getElementById('editBannerText').textContent =
         'กำลังแก้ไขบ้านเลขที่ ' + ((rec.address && rec.address.addrNo) || '') +
-        ' (' + (rec.community || '') + ') — บันทึกแล้วข้อมูลเก่าจะถูกแทนที่';
-    document.getElementById('saveButton').textContent = 'บันทึกการแก้ไข';
+        ' (' + (rec.community || '') + ') — ส่งแล้วรอแอดมินอนุมัติก่อนถึงจะมีผล';
+    document.getElementById('saveButton').textContent = 'ส่งคำขอแก้ไข';
+    var __erb = document.getElementById('editReasonBox');
+    if (__erb) { __erb.hidden = false; var __er = document.getElementById('editReason'); if (__er) __er.value = ''; }
     showPage('formPage');
     window.scrollTo(0, 0);
 }
 
 function exitEditMode() {
     window.__surveyEdit = null;
+    try{ var __erb2 = document.getElementById('editReasonBox'); if (__erb2) __erb2.hidden = true; }catch(e){}
     const banner = document.getElementById('editBanner');
     if (banner) banner.hidden = true;
     const btn = document.getElementById('saveButton');
@@ -3550,6 +3784,8 @@ function fillSurveyForm(rec) {
         setPreview(q('.petPhotoPreview'), pet.photoUrl || pet.petPhotoBase64 || '');
     });
     document.getElementById('recorderName').value = rec.recorderName || '';
+    document.getElementById('ownerName').value = rec.ownerName || rec.recorderName || '';
+    if (rec.surveyorId) document.getElementById('surveyorId').value = rec.surveyorId;
     setSelectValue(document.getElementById('recorderRole'), rec.recorderRole);
     document.getElementById('citizenId').value = rec.citizenId || '';
     document.getElementById('phone').value = rec.phone || '';
@@ -3571,9 +3807,366 @@ function fillSurveyForm(rec) {
     if (window.__surveyEdit) window.__surveyEdit.existingPhotos = rec.existingPhotos || eps;
 }
 
+/* ================= ADD-ON v8 : vaccine + approval (frontend) ================= */
+(function(){
+'use strict';
+var VAX_COUNT_KEY = 'animalSurveyVaxLastCount_v1';
+
+function v8esc(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function v8parseISO(s){
+  if(!s) return null;
+  var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  var d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+function v8addDays(d, n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+function v8fmtThai(d){
+  if(!d) return '';
+  try{
+    var dd=('0'+d.getDate()).slice(-2), mm=('0'+(d.getMonth()+1)).slice(-2), yy=d.getFullYear()+543;
+    return dd+'/'+mm+'/'+yy;
+  }catch(e){ return ''; }
+}
+function v8statusPill(daysLeft){
+  if(daysLeft < 0) return '<span class="vax-pill vax-overdue">เลยกำหนด '+Math.abs(daysLeft)+' วัน</span>';
+  if(daysLeft === 0) return '<span class="vax-pill vax-overdue">ครบกำหนดวันนี้</span>';
+  if(daysLeft <= 7) return '<span class="vax-pill vax-due7">อีก '+daysLeft+' วัน</span>';
+  if(daysLeft <= 30) return '<span class="vax-pill vax-due30">อีก '+daysLeft+' วัน</span>';
+  return '<span class="vax-pill vax-upcoming">อีก '+daysLeft+' วัน</span>';
+}
+
+/* ---------- vaccine page ---------- */
+window.openVaccine = function(){
+  try{
+    var csel = document.getElementById('vaxCenter');
+    if(csel && !csel.options.length){
+      csel.innerHTML = '<option value="">-- ทุกศูนย์ --</option>' + Object.keys(centerNames).map(function(k){
+        return '<option value="'+v8esc(centerNames[k])+'">'+v8esc(centerNames[k])+'</option>';
+      }).join('');
+    }
+    varmselFill();
+  }catch(e){}
+  showPage('vaccinePage');
+  window.scrollTo(0,0);
+  loadVaccineDue();
+};
+function varmselFill(){
+  try{
+    var c = (document.getElementById('vaxCenter').value || '');
+    var commSel = document.getElementById('vaxCommunity');
+    var list = [];
+    Object.keys(communitiesByCenter).forEach(function(k){
+      if(!c || centerNames[k] === c) list = list.concat(communitiesByCenter[k]);
+    });
+    commSel.innerHTML = '<option value="">-- ทุกชุมชน --</option>' + list.map(function(n){
+      return '<option value="'+v8esc(n)+'">'+v8esc(n)+'</option>';
+    }).join('');
+  }catch(e){}
+}
+try{ document.addEventListener('change', function(e){ if(e.target && e.target.id==='vaxCenter') varmselFill(); }); }catch(e){}
+
+window.loadVaccineDue = async function(){
+  var msg = document.getElementById('vaxMsg');
+  var body = document.getElementById('vaxBody');
+  var table = document.getElementById('vaxTable');
+  var cards = document.getElementById('vaxCards');
+  var sumEl = document.getElementById('vaxSummary');
+  if(msg) msg.textContent = 'กำลังโหลดจากเซิร์ฟเวอร์…';
+  if(body) body.innerHTML = '';
+  if(cards) cards.innerHTML = '';
+  if(table) table.hidden = true;
+  try{
+    var payload = {
+      action: 'getVaccineDue',
+      centerName: (document.getElementById('vaxCenter').value || ''),
+      community: (document.getElementById('vaxCommunity').value || ''),
+      daysAhead: Number((document.getElementById('vaxDays').value || '30')),
+      overdueDays: 180,
+      limit: 2000
+    };
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify(payload)});
+    var result = JSON.parse(await res.text());
+    var d = (result && typeof result.message === 'object') ? result.message : null;
+    if(!result || result.status !== 'success' || !d){
+      if(msg) msg.textContent = (function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return 'โหลดไม่สำเร็จ: ' + (raw || 'ไม่ทราบสาเหตุ'); })((result && result.message));
+      return;
+    }
+    var items = d.items || [];
+    if(msg) msg.textContent = items.length ? ('พบ '+items.length+' รายการ (กระตุ้นทุก '+d.boosterDays+' วัน)') : 'ไม่พบรายการครบกำหนดในช่วงที่เลือก ✅';
+    if(sumEl){
+      var c = d.counts || {};
+      sumEl.innerHTML = items.length ? ('<span class="vax-pill vax-overdue">เลยกำหนด: '+(c.overdue||0)+'</span> ' +
+        '<span class="vax-pill vax-due7">≤7 วัน: '+(c.due7||0)+'</span> ' +
+        '<span class="vax-pill vax-due30">8–30 วัน: '+(c.due30||0)+'</span> ' +
+        '<span class="vax-pill vax-upcoming">เกิน 30 วัน: '+(c.upcoming||0)+'</span>') : '';
+    }
+    try{ localStorage.setItem(VAX_COUNT_KEY, JSON.stringify({t: Date.now(), n: (d.counts && ((d.counts.overdue||0)+(d.counts.due7||0))) || 0})); }catch(e){}
+    updateVaxBadge();
+    if(!items.length){ if(table) table.hidden = true; return; }
+    if(table) table.hidden = false;
+    if(body){
+      body.innerHTML = items.slice(0, 500).map(function(it){
+        return '<tr><td>'+v8statusPill(it.daysLeft)+'</td>' +
+          '<td><b>'+v8esc(it.dueDate)+'</b></td>' +
+          '<td><b>'+v8esc(it.petName || '(ไม่ระบุชื่อ)')+'</b><br><span style="color:#5d6785">'+v8esc(it.animalType||'')+'</span></td>' +
+          '<td>บ้าน '+v8esc(it.addrNo||'-')+' '+v8esc(it.community||'')+'<br>'+v8esc(it.owner||'')+'</td>' +
+          '<td><a href="tel:'+v8esc(it.phone||'')+'">'+v8esc(it.phone||'-')+'</a></td>' +
+          '<td>'+v8esc(it.lastDate||'')+'</td></tr>';
+      }).join('');
+    }
+    // การ์ดสำรองสำหรับจอมือถือ (ใช้ตารางเป็นหลัก ถ้าอยากได้การ์ดค่อยเปิด)
+    if(cards && window.innerWidth < 560){
+      cards.innerHTML = items.slice(0, 100).map(function(it){
+        return '<div class="pending-card" style="border-left-color:'+(it.daysLeft<0?'#a31212':(it.daysLeft<=7?'#e3a72f':'#2c3e90'))+'">' +
+          '<div>'+v8statusPill(it.daysLeft)+' <b>ครบ '+v8esc(it.dueDate)+'</b></div>' +
+          '<div style="margin-top:6px"><b>'+v8esc(it.petName||'(ไม่ระบุชื่อ)')+'</b> ('+v8esc(it.animalType||'')+') — บ้าน '+v8esc(it.addrNo||'-')+' '+v8esc(it.community||'')+'</div>' +
+          '<div style="color:#5d6785;font-size:13px">เจ้าของ: '+v8esc(it.owner||'-')+' · โทร '+v8esc(it.phone||'-')+' · ฉีดล่าสุด '+v8esc(it.lastDate||'-')+'</div></div>';
+      }).join('');
+    }
+    // แจ้งเตือนผ่าน Notification API ถ้าเคยอนุญาต
+    try{
+      if(window.Notification && Notification.permission === 'granted' && items.length){
+        var urgent = items.filter(function(x){ return x.daysLeft <= 7; }).length;
+        if(urgent > 0 && !window.__vaxNotifiedToday){
+          window.__vaxNotifiedToday = true;
+          new Notification('วัคซีนพิษสุนัขบ้าครบกำหนด', {body: 'เลยกำหนด/ครบใน 7 วัน: '+urgent+' รายการ กดเพื่อดูรายชื่อ'});
+        }
+      }
+    }catch(e){}
+  }catch(e){
+    if(msg) msg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่';
+  }
+};
+
+window.enableVaxNotify = async function(){
+  try{
+    if(!window.Notification){ alert('เบราว์เซอร์นี้ไม่รองรับ Notification'); return; }
+    var p = await Notification.requestPermission();
+    alert(p === 'granted' ? 'เปิดแจ้งเตือนแล้ว ✅' : 'ยังไม่ได้รับอนุญาตแจ้งเตือน');
+  }catch(e){ alert('เปิดแจ้งเตือนไม่สำเร็จ'); }
+};
+
+function updateVaxBadge(){
+  try{
+    var raw = localStorage.getItem(VAX_COUNT_KEY);
+    var n = 0;
+    if(raw){ try{ n = JSON.parse(raw).n || 0; }catch(e){} }
+    document.querySelectorAll('[data-vax-count]').forEach(function(el){
+      el.textContent = n > 0 ? ('('+n+')') : '';
+    });
+  }catch(e){}
+}
+try{ setTimeout(updateVaxBadge, 500); }catch(e){}
+
+/* ---------- admin approval ---------- */
+function adminCode(){ return (document.getElementById('adminPasscode').value || '').trim(); }
+function adminHeaders(code){
+  return { 'Content-Type': 'text/plain;charset=utf-8' };
+}
+window.openAdmin = function(){
+  try{
+    var saved = '';
+    try{ saved = sessionStorage.getItem('animalSurveyAdminCode') || ''; }catch(e){}
+    if(saved) document.getElementById('adminPasscode').value = saved;
+  }catch(e){}
+  showPage('adminPage');
+  window.scrollTo(0,0);
+};
+window.adminLogout = function(){
+  try{ sessionStorage.removeItem('animalSurveyAdminCode'); }catch(e){}
+  document.getElementById('adminPasscode').value = '';
+  document.getElementById('pendingList').innerHTML = '';
+  setAdminMsg('ออกจากโหมดแอดมินแล้ว');
+};
+try{
+  const __apInput = document.getElementById('adminPasscode');
+  if (__apInput && !__apInput.dataset.enterBound) {
+    __apInput.dataset.enterBound = '1';
+    __apInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); loadPendingList(); }
+    });
+  }
+}catch(e){}
+function setAdminMsg(t){
+  var el = document.getElementById('adminMsg');
+  if(el) el.textContent = t || '';
+}
+function isLegacyGasMsg(m){ return typeof m === 'string' && m.indexOf('กรุณาระบุชื่อศูนย์บริการและชุมชน') !== -1; }
+function legacyGasHint(){ return 'เซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า (ยังไม่มีคำสั่ง approval/vaccine) วิธีแก้: เปิด Apps Script \u2192 วางโค้ดไฟล์ Code_8_APPROVAL_VACCINE_1_.gs ทับของเดิมทั้งหมด \u2192 Deploy \u2192 Manage deployments \u2192 Edit \u2192 Version: New version \u2192 Deploy แล้วกลับมากดโหลดใหม่'; }
+function friendlyLoadMsg(raw, fallback){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return (fallback || 'โหลดไม่สำเร็จ: ') + (raw || 'ไม่ทราบสาเหตุ'); }
+window.loadPendingList = async function(statusMode){
+  var code = adminCode();
+  if(!code){ setAdminMsg('กรุณากรอกรหัสแอดมินก่อน'); return; }
+  try{ sessionStorage.setItem('animalSurveyAdminCode', code); }catch(e){}
+  setAdminMsg('กำลังโหลดคิว…');
+  document.getElementById('pendingList').innerHTML = '';
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listPending', passcode: code, status: statusMode === 'all' ? 'all' : 'pending'})});
+    var result = JSON.parse(await res.text());
+    var d = (result && typeof result.message === 'object') ? result.message : null;
+    if(!result || result.status !== 'success' || !d){
+      setAdminMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return 'โหลดไม่สำเร็จ: ' + (raw || 'รหัสผิดหรือเซิร์ฟเวอร์ขัดข้อง'); })((result && result.message)));
+      return;
+    }
+    var items = d.items || [];
+    if(!items.length){ setAdminMsg(statusMode === 'all' ? 'ไม่มีคำขอเลย' : 'ไม่มีคิวรออนุมัติแล้ว ✅'); return; }
+    setAdminMsg('พบ '+items.length+' รายการ' + (statusMode === 'all' ? ' (ทั้งหมด)' : ' (รออนุมัติ)'));
+    renderPending(items, code);
+  }catch(e){ setAdminMsg('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
+};
+function renderPending(items, code){
+  var box = document.getElementById('pendingList');
+  box.innerHTML = items.map(function(it){
+    var cls = it.status === 'approved' ? ' approved' : (it.status === 'rejected' ? ' rejected' : '');
+    var stTxt = it.status === 'pending' ? '⏳ รออนุมัติ' : (it.status === 'approved' ? '✅ อนุมัติแล้ว' : '❌ ตีกลับแล้ว');
+    return '<div class="pending-card'+cls+'" id="pend-'+it.requestId+'">' +
+      '<div><b>'+v8esc(it.requestId)+'</b> · '+stTxt+'</div>' +
+      '<div style="margin-top:4px">บ้านเลขที่ <b>'+v8esc(it.addrNo)+'</b> · '+v8esc(it.communityName)+' · '+v8esc(it.centerName)+'</div>' +
+      '<div style="color:#5d6785;font-size:13.5px">ขอโดย: '+v8esc(it.requestedBy)+' ('+v8esc(it.recorderRole||'')+') · '+v8esc(it.requestTime||'')+'</div>' +
+      '<div style="margin-top:6px"><b>เหตุผล:</b> '+v8esc(it.editReason||'-')+'</div>' +
+      '<div style="color:#5d6785;font-size:13px">เดิม: ' + v8esc(summPets(it.oldSummary)) + ' → ขอแก้เป็น: ' + (it.newPets==null?'':v8esc(String(it.newPets)+' ตัว')) + (it.newOwner?(' เจ้าของ: '+v8esc(it.newOwner)):'') + '</div>' +
+      (it.reviewNote ? '<div style="font-size:13px">หมายเหตุแอดมิน: '+v8esc(it.reviewNote)+'</div>' : '') +
+      '<div class="admin-bar">' +
+        '<button type="button" class="mini-button" onclick="togglePendingDetail(\''+it.requestId+'\')">🔍 ดูเทียบก่อน/หลัง</button>' +
+        (it.status === 'pending' ? '<button type="button" class="mini-button primary" onclick="reviewPending(\''+it.requestId+'\',\'approve\')">✅ อนุมัติ</button>' +
+        '<button type="button" class="mini-button danger" onclick="reviewPending(\''+it.requestId+'\',\'reject\')">❌ ตีกลับ</button>' : '') +
+      '</div>' +
+      '<div id="detail-'+it.requestId+'" style="display:none"></div>' +
+    '</div>';
+  }).join('');
+}
+function summPets(o){
+  if(!o) return '-';
+  var pets = o.pets || [];
+  if(!pets.length) return (o.rows||0)+' แถว';
+  return pets.slice(0,4).map(function(p){ return (p.pet||'(ไม่ระบุชื่อ)')+'/'+(p.type||''); }).join(', ') + (pets.length>4 ? ' (+'+(pets.length-4)+' ตัว)' : '');
+}
+window.togglePendingDetail = async function(requestId){
+  var el = document.getElementById('detail-'+requestId);
+  if(!el) return;
+  if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML=''; return; }
+  el.style.display = 'block';
+  el.innerHTML = 'กำลังโหลดรายละเอียด…';
+  try{
+    var code = adminCode();
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listPending', passcode: code, requestId: requestId})});
+    var result = JSON.parse(await res.text());
+    var d = (result && typeof result.message === 'object') ? result.message : null;
+    var it = d && d.items && d.items[0];
+    if(!it){ el.innerHTML = 'โหลดรายละเอียดไม่สำเร็จ'; return; }
+    el.innerHTML = buildDiffHtml(it);
+  }catch(e){ el.innerHTML = 'เชื่อมต่อไม่ได้'; }
+};
+function kv(o, k){ return (o && o[k] != null) ? String(o[k]) : ''; }
+function buildDiffHtml(it){
+  var np = it.newPayload || {};
+  var nPets = np.pets || [];
+  var oFull = it.oldFull || [];
+  var rows = '';
+  rows += diffRow('เจ้าของสัตว์', oFull.length? kv(oFull[0],'ชื่อเจ้าของสัตว์') : '', np.ownerName||'');
+  rows += diffRow('เบอร์มือถือ', oFull.length? kv(oFull[0],'เบอร์โทรศัพท์มือถือ') : '', np.phone||'');
+  rows += diffRow('บ้านเลขที่', oFull.length? kv(oFull[0],'บ้านเลขที่') : '', (np.address&&np.address.addrNo)||'');
+  rows += diffRow('ถนน/ซอย', oFull.length? (kv(oFull[0],'ถนน')+'/'+kv(oFull[0],'ซอย')) : '', ((np.address&&np.address.road)||'')+'/'+((np.address&&np.address.soi)||''));
+  rows += diffRow('จำนวนสัตว์', String(oFull.length), String(nPets.length));
+  var petRows = nPets.map(function(p, i){
+    var o = oFull[i] || {};
+    return '<tr><td>สัตว์ตัวที่ '+(i+1)+'</td><td>'+v8esc(kv(o,'ชื่อสัตว์')+' / '+kv(o,'ประเภทสัตว์')+' / วัคซีน:'+kv(o,'วันที่ฉีดวัคซีน'))+'</td><td>'+v8esc((p.name||'')+' / '+(p.animalType||np.animalType||'')+' / วัคซีน:'+(p.rabiesDate||''))+'</td></tr>';
+  }).join('');
+  var photoNote = '';
+  if(np.ownerPhotoPendingUrl) photoNote += '<div>📷 มีรูปเจ้าของใหม่: <a href="'+v8esc(np.ownerPhotoPendingUrl)+'" target="_blank" rel="noopener">เปิดดู</a></div>';
+  (nPets||[]).forEach(function(p,i){ if(p.photoPendingUrl) photoNote += '<div>📷 รูปสัตว์ตัวที่ '+(i+1)+': <a href="'+v8esc(p.photoPendingUrl)+'" target="_blank" rel="noopener">เปิดดู</a></div>'; });
+  return '<table class="diff-table"><tr><th>หัวข้อ</th><th>ข้อมูลเดิม</th><th>ข้อมูลที่ขอแก้</th></tr>'+rows+petRows+'</table>'+photoNote +
+    '<div class="admin-bar"><input id="note-'+it.requestId+'" placeholder="หมายเหตุแอดมิน (ถ้ามี)" style="flex:1;min-width:200px"></div>';
+}
+function diffRow(label, a, b){
+  var same = String(a||'').trim() === String(b||'').trim();
+  return '<tr class="'+(same?'diff-same':'diff-changed')+'"><td>'+v8esc(label)+'</td><td>'+v8esc(a||'-')+'</td><td>'+v8esc(b||'-')+'</td></tr>';
+}
+window.reviewPending = async function(requestId, decision){
+  var code = adminCode();
+  if(!code){ setAdminMsg('กรุณากรอกรหัสแอดมิน'); return; }
+  var noteEl = document.getElementById('note-'+requestId);
+  var note = noteEl ? noteEl.value : '';
+  var okMsg = decision === 'approve' ? 'ยืนยันอนุมัติคำขอ '+requestId+' ? ข้อมูลจริงจะถูกเขียนทับทันที' : 'ยืนยันตีกลับคำขอ '+requestId+' ?';
+  if(!confirm(okMsg)) return;
+  setAdminMsg('กำลังดำเนินการ…');
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'reviewEdit', passcode: code, requestId: requestId, decision: decision, reviewBy: 'admin', reviewNote: note})});
+    var result = JSON.parse(await res.text());
+    var msg = (result && typeof result.message === 'object') ? JSON.stringify(result.message) : result.message;
+    if(result && result.status === 'success'){
+      setAdminMsg('✅ '+msg);
+      var card = document.getElementById('pend-'+requestId);
+      if(card) card.style.opacity = '0.55';
+      setTimeout(function(){ loadPendingList(); }, 1200);
+    } else {
+      setAdminMsg('❌ '+(msg||'ไม่สำเร็จ'));
+    }
+  }catch(e){ setAdminMsg('เชื่อมต่อไม่ได้'); }
+};
+window.loadMyRequests = async function(){
+  var who = (document.getElementById('myReqName').value || '').trim();
+  if(!who){ document.getElementById('myReqMsg').textContent = 'กรุณากรอกชื่อผู้ขอ'; return; }
+  document.getElementById('myReqMsg').textContent = 'กำลังตรวจสอบ…';
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'getMyEditRequests', requestedBy: who})});
+    var result = JSON.parse(await res.text());
+    var d = (result && typeof result.message === 'object') ? result.message : null;
+    if(!result || result.status !== 'success' || !d){ var _raw = (result && result.message); document.getElementById('myReqMsg').textContent = (typeof _raw === 'string' && isLegacyGasMsg(_raw)) ? ('ตรวจสอบไม่สำเร็จ: ' + legacyGasHint()) : ('ตรวจสอบไม่สำเร็จ: ' + (_raw || 'ไม่ทราบสาเหตุ')); return; }
+    var items = d.items || [];
+    if(!items.length){ document.getElementById('myReqMsg').textContent = 'ไม่พบคำขอของชื่อนี้'; document.getElementById('myReqList').innerHTML=''; return; }
+    document.getElementById('myReqMsg').textContent = 'พบ '+items.length+' คำขอ';
+    document.getElementById('myReqList').innerHTML = items.map(function(it){
+      var st = it.status==='pending'?'⏳ รอแอดมินอนุมัติ':(it.status==='approved'?'✅ อนุมัติแล้ว':'❌ ถูกตีกลับ');
+      return '<div class="outbox-item"><span><b>'+v8esc(it.requestId)+'</b> บ้าน '+v8esc(it.addrNo)+' '+v8esc(it.communityName)+' — '+st+(it.reviewNote?' ('+v8esc(it.reviewNote)+')':'')+'</span></div>';
+    }).join('');
+  }catch(e){ document.getElementById('myReqMsg').textContent = 'เชื่อมต่อไม่ได้'; }
+};
+
+/* ---------- แก้ไข showPage/backToCenter ให้รู้จักหน้าใหม่ (กันหน้าเก่าค้าง) ---------- */
+try{
+  var _showPage = window.showPage;
+  window.showPage = function(name){
+    ['centerPage','formPage','searchPage','statsPage','vaccinePage','adminPage'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      if(id === name){ el.classList.remove('page-hidden'); el.classList.add('page-visible'); }
+      else { el.classList.remove('page-visible'); el.classList.add('page-hidden'); }
+    });
+  };
+}catch(e){}
+var _backToCenter = window.backToCenter;
+
+})();
+
+/* hint ครบกำหนดวัคซีนในฟอร์ม */
+document.addEventListener('change', function(e){
+  if(e.target && e.target.classList && e.target.classList.contains('rabiesDate')){
+    try{
+      var card = e.target.closest('.pet-card');
+      var old = card ? card.querySelector('.rabies-due-hint') : null;
+      if(old) old.remove();
+      if(!e.target.value) return;
+      var d = new Date(e.target.value + 'T00:00:00');
+      if(isNaN(d.getTime())) return;
+      var due = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      due.setDate(due.getDate() + 365);
+      var dd=('0'+due.getDate()).slice(-2), mm=('0'+(due.getMonth()+1)).slice(-2), yy=due.getFullYear()+543;
+      var div = document.createElement('div');
+      div.className = 'rabies-due-hint';
+      div.textContent = '⏰ ครบกำหนดฉีดซ้ำ: ' + dd + '/' + mm + '/' + yy + ' (บวก 365 วัน)';
+      e.target.after(div);
+    }catch(err){}
+  }
+});
+
 updateOutboxBadge();
 
 </script>
+
 
 </body>
 </html>
