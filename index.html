@@ -2730,10 +2730,13 @@ document
         const houseLngVal =
             document.getElementById('houseLng').value;
 
+        // โหมดแก้ไขไม่บังคับพิกัด (แผนที่ถูกซ่อน; มีพิกัดเดิมก็ส่งต่อ ไม่มีก็ส่งว่างเหมือนเดิม)
         if (
-            !houseLatVal || !houseLngVal ||
-            !Number.isFinite(Number(houseLatVal)) ||
-            !Number.isFinite(Number(houseLngVal))
+            !window.__surveyEdit && (
+                !houseLatVal || !houseLngVal ||
+                !Number.isFinite(Number(houseLatVal)) ||
+                !Number.isFinite(Number(houseLngVal))
+            )
         ) {
 
             alert(
@@ -3951,28 +3954,19 @@ function enterEditMode(rec, key) {
     try { var __pc = document.getElementById('pinConfirmed'); if (__pc) __pc.checked = false; } catch (e) {}
     try { if (typeof refreshOwnerPhotoMode === 'function') refreshOwnerPhotoMode(); } catch (e) {}
     try { if (typeof refreshPetPhotoModes === 'function') setTimeout(refreshPetPhotoModes, 50); } catch (e) {}
-    // โหมดแก้ไข: ถ้ามีพิกัดเดิมให้ซ่อนแผนที่ทั้งแผง (ใช้ค่าพิกัดเดิมส่งต่อ ไม่ต้องปักใหม่)
-    // ถ้าไม่มีพิกัดเดิม คงแผนที่ไว้ให้ปักหมุดใหม่ (ไม่งั้นส่งไม่ผ่านด่านพิกัด)
+    // โหมดแก้ไข: ซ่อนแผนที่ทั้งแผงเสมอ (ไม่ปักหมุดในโหมดนี้)
+    // มีพิกัดเดิม → ใช้ค่าพิกัดเดิมส่งต่อ / ไม่มีพิกัดเดิม → ส่งได้โดยพิกัดว่างเหมือนเดิม
     try {
-        var __hl = (rec.houseLocation || {});
-        var __la = parseFloat(__hl.latitude), __ln = parseFloat(__hl.longitude);
-        var __panel = document.getElementById('houseMapPanel');
-        if (Number.isFinite(__la) && Number.isFinite(__ln)) {
-            if (__panel) __panel.hidden = true;
-            try { var __ebt = document.getElementById('editBannerText'); if (__ebt) __ebt.textContent += ' — ใช้พิกัดเดิม ไม่ต้องปักหมุดใหม่'; } catch (e) {}
-        } else {
-            if (__panel) {
-                __panel.hidden = false;
-                setTimeout(function() { try { if (houseMap) houseMap.invalidateSize(); } catch (e) {} }, 150);
-            }
-            setTimeout(function() {
-                try {
-                    if (typeof initHouseMap === 'function') initHouseMap();
-                    if (typeof enableMapPick === 'function') enableMapPick();
-                    setHouseMapMessage('บ้านหลังนี้ยังไม่มีหมุดเดิม กรุณากด GPS หรือแตะบนแผนที่เพื่อปักหมุดใหม่ แล้วติ๊กยืนยันหมุดก่อนส่ง');
-                } catch (e) {}
-            }, 500);
-        }
+        var __hl2 = (rec.houseLocation || {});
+        var __la2 = parseFloat(__hl2.latitude), __ln2 = parseFloat(__hl2.longitude);
+        var __panel2 = document.getElementById('houseMapPanel');
+        if (__panel2) __panel2.hidden = true;
+        try {
+            var __ebt2 = document.getElementById('editBannerText');
+            if (__ebt2) __ebt2.textContent += Number.isFinite(__la2) && Number.isFinite(__ln2)
+                ? ' — ใช้พิกัดเดิม ไม่ต้องปักหมุดใหม่'
+                : ' — บ้านนี้ยังไม่มีพิกัด (ส่งได้โดยไม่แก้พิกัด)';
+        } catch (e) {}
     } catch (e) {}
     showPage('formPage');
     window.scrollTo(0, 0);
