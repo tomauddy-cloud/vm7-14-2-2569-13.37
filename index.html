@@ -4159,7 +4159,8 @@ window.openVaccine = function(){
   }catch(e){}
   showPage('vaccinePage');
   window.scrollTo(0,0);
-  loadVaccineDue();
+  // ยกเลิกโหลดอัตโนมัติ: ให้กดปุ่ม "โหลดรายการ" เอง (เปิดหน้าไวขึ้น ประหยัดเน็ต)
+  try { var __vm = document.getElementById('vaxMsg'); if (__vm && !__vm.textContent) __vm.textContent = 'เลือกตัวกรองแล้วกด “🔄 โหลดรายการ” เพื่อดูข้อมูล'; } catch (e) {}
 };
 function varmselFill(){
   try{
