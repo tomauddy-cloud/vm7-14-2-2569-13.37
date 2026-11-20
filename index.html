@@ -351,6 +351,7 @@ input[type="file"]:focus-visible { outline: 3px solid var(--gold); outline-offse
 
 
 /* ===== แผนที่บ้านสำรวจ ===== */
+#houseMapPanel[hidden]{display:none !important}
 .house-map-panel{margin:18px 0;padding:16px;background:#f7f9ff;border:1px solid #d9deec;border-radius:14px}
 .house-map-panel h3{margin-top:0;color:#24377f}
 .house-map-help{font-size:14px;color:#5d6785;margin:4px 0 12px}
@@ -969,9 +970,10 @@ button { min-height: 42px; touch-action: manipulation; }
     <span>ฉันตรวจสอบแล้วว่าหมุดตรงตัวบ้านจริง (ซูมแผนที่ดาวเทียมดูหลังคาแล้ว) — ติ๊กก่อนบันทึกทุกครั้ง</span>
   </label>
   <div id="mapToast" role="status" aria-live="polite"></div>
-  <input type="hidden" id="houseLat" name="houseLat">
-  <input type="hidden" id="houseLng" name="houseLng">
 </section>
+<!-- พิกัดอยู่นอกแผงแผนที่ เพื่อให้โหมดแก้ไขถอดแผงทิ้งแล้วยังส่งค่าพิกัดเดิมได้ -->
+<input type="hidden" id="houseLat" name="houseLat">
+<input type="hidden" id="houseLng" name="houseLng">
 
 <label>บ้านเลขที่ เจ้าของสัตว์เลี้ยง</label>
 <input id="addrNo" required>
@@ -1203,6 +1205,7 @@ button { min-height: 42px; touch-action: manipulation; }
 กองสาธารณสุขและสิ่งแวดล้อม |
 งานสัตวแพทย์ |
 045-246060 ต่อ 180 280
+<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-20b (โหมดแก้ไขถอดแผนที่ออก)</span>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -1698,7 +1701,7 @@ function updateHouseCoordsText(lat, lng) {
     } else {
         txt += ' (ปักหมุดเอง — ตรวจสอบให้ตรงบ้านแล้ว)';
     }
-    document.getElementById('houseMapCoords').textContent = txt;
+    try { var __hmc2 = document.getElementById('houseMapCoords'); if (__hmc2) __hmc2.textContent = txt; } catch (e) {}
 }
 
 function setSelectedHouseLocation(lat, lng, status, gpsAccuracy) {
@@ -2750,8 +2753,8 @@ document
                     block: 'center'
                 });
 
-            // กันเหนียว: เผื่อแผงแผนที่ถูกซ่อนแล้วค่าหาย ให้โชว์ก่อนปัก
-            try { var __hpnl = document.getElementById('houseMapPanel'); if (__hpnl) __hpnl.hidden = false; } catch (e) {}
+            // กันเหนียว: เผื่อแผงแผนที่ถูกถอด/ซ่อนแล้วค่าพิกัดหาย ให้เสียบคืนก่อนปัก
+            try { var __hpnl = document.getElementById('houseMapPanel'); if (!__hpnl && typeof restoreHouseMapPanel === 'function') { restoreHouseMapPanel(); __hpnl = document.getElementById('houseMapPanel'); } if (__hpnl) { __hpnl.hidden = false; __hpnl.style.display = ''; } } catch (e) {}
             enableMapPick();
             return;
         }
@@ -2775,7 +2778,8 @@ document
         // บังคับติ๊กยืนยันว่าตรวจหมุดตรงบ้านแล้ว (กัน GPS ดีแต่หมุดผิดหลัง)
         // ยกเว้นโหมดแก้ไขที่ซ่อนแผนที่ (ใช้พิกัดเดิม ติ๊กไม่ได้เพราะไม่มีช่องติ๊ก)
         var __pinOk = document.getElementById('pinConfirmed');
-        var __mapHidden = (function() { var p = document.getElementById('houseMapPanel'); return !!(p && p.hidden); })();
+        var __mapHidden = false;
+        try { __mapHidden = (typeof isHouseMapPanelGone === 'function') ? isHouseMapPanelGone() : (function() { var p = document.getElementById('houseMapPanel'); return !p || !!(p && p.hidden); })(); } catch (e) {}
         if (!(window.__surveyEdit && __mapHidden) && (!__pinOk || !__pinOk.checked)) {
             alert('กรุณาซูมแผนที่ดาวเทียมดูหลังคา ลากหมุดให้ตรงตัวบ้าน แล้วติ๊ก “ฉันตรวจสอบแล้วว่าหมุดตรงตัวบ้านจริง” ก่อนบันทึก');
             setHouseMapMessage('⚠️ ยังไม่ได้ติ๊กยืนยันหมุดตรงบ้าน ห้ามบันทึก! ซูมดูดาวเทียมแล้วติ๊กก่อน', true);
@@ -3938,6 +3942,39 @@ async function loadSurveyorFromServer() {
     }
 }
 
+/* ถอด/เสียบแผงแผนที่ (โหมดแก้ไขถอดทิ้งเลย ไม่ใช่แค่ซ่อน) */
+var __detachedMapPanel = null;
+var __detachedMapParent = null;
+var __detachedMapNext = null;
+function detachHouseMapPanel() {
+    try {
+        var p = document.getElementById('houseMapPanel');
+        if (!p) return;
+        __detachedMapParent = p.parentNode;
+        __detachedMapNext = p.nextSibling;
+        __detachedMapPanel = p;
+        p.remove();
+    } catch (e) {}
+}
+function restoreHouseMapPanel() {
+    try {
+        if (document.getElementById('houseMapPanel')) return;
+        if (!__detachedMapPanel || !__detachedMapParent) return;
+        if (__detachedMapNext && __detachedMapNext.parentNode === __detachedMapParent) {
+            __detachedMapParent.insertBefore(__detachedMapPanel, __detachedMapNext);
+        } else {
+            __detachedMapParent.appendChild(__detachedMapPanel);
+        }
+        __detachedMapPanel.hidden = false;
+        __detachedMapPanel.style.display = '';
+        try { if (typeof houseMap !== 'undefined' && houseMap) setTimeout(function() { try { houseMap.invalidateSize(); } catch (e) {} }, 120); } catch (e) {}
+    } catch (e) {}
+}
+function isHouseMapPanelGone() {
+    var p = document.getElementById('houseMapPanel');
+    return !p || !!p.hidden || p.style.display === 'none';
+}
+
 /* ---------- โหมดแก้ไข ---------- */
 
 function enterEditMode(rec, key) {
@@ -3954,19 +3991,16 @@ function enterEditMode(rec, key) {
     try { var __pc = document.getElementById('pinConfirmed'); if (__pc) __pc.checked = false; } catch (e) {}
     try { if (typeof refreshOwnerPhotoMode === 'function') refreshOwnerPhotoMode(); } catch (e) {}
     try { if (typeof refreshPetPhotoModes === 'function') setTimeout(refreshPetPhotoModes, 50); } catch (e) {}
-    // โหมดแก้ไข: ซ่อนแผนที่ทั้งแผงเสมอ (ไม่ปักหมุดในโหมดนี้)
+    // โหมดแก้ไข: ถอดแผงแผนที่ออกจากหน้าทิ้งเลย (ไม่ใช่แค่ซ่อน)
     // มีพิกัดเดิม → ใช้ค่าพิกัดเดิมส่งต่อ / ไม่มีพิกัดเดิม → ส่งได้โดยพิกัดว่างเหมือนเดิม
+    try { detachHouseMapPanel(); } catch (e) {}
     try {
         var __hl2 = (rec.houseLocation || {});
         var __la2 = parseFloat(__hl2.latitude), __ln2 = parseFloat(__hl2.longitude);
-        var __panel2 = document.getElementById('houseMapPanel');
-        if (__panel2) __panel2.hidden = true;
-        try {
-            var __ebt2 = document.getElementById('editBannerText');
-            if (__ebt2) __ebt2.textContent += Number.isFinite(__la2) && Number.isFinite(__ln2)
-                ? ' — ใช้พิกัดเดิม ไม่ต้องปักหมุดใหม่'
-                : ' — บ้านนี้ยังไม่มีพิกัด (ส่งได้โดยไม่แก้พิกัด)';
-        } catch (e) {}
+        var __ebt2 = document.getElementById('editBannerText');
+        if (__ebt2) __ebt2.textContent += Number.isFinite(__la2) && Number.isFinite(__ln2)
+            ? ' — ใช้พิกัดเดิม ไม่ต้องปักหมุดใหม่'
+            : ' — บ้านนี้ยังไม่มีพิกัด (ส่งได้โดยไม่แก้พิกัด)';
     } catch (e) {}
     showPage('formPage');
     window.scrollTo(0, 0);
@@ -3974,8 +4008,8 @@ function enterEditMode(rec, key) {
 
 function exitEditMode() {
     window.__surveyEdit = null;
-    // คืนแผนที่ (โหมดสำรวจใหม่ต้องเห็นแผนที่เสมอ) + ขยับขนาดเผื่อ Leaflet ค้าง
-    try { var __hp = document.getElementById('houseMapPanel'); if (__hp) __hp.hidden = false; } catch (e) {}
+    // เสียบแผงแผนที่คืน (โหมดสำรวจใหม่ต้องเห็นแผนที่เสมอ)
+    try { restoreHouseMapPanel(); } catch (e) {}
     try { setTimeout(function() { try { if (typeof houseMap !== 'undefined' && houseMap) houseMap.invalidateSize(); } catch (e) {} }, 120); } catch (e) {}
     // กันเหนียว: ซ่อนกล่องเลือกรูปทันที (โหมดสำรวจใหม่ต้องไม่มีกล่องนี้)
     try { var __ocb = document.getElementById('ownerPhotoChoiceBox'); if (__ocb) __ocb.hidden = true; } catch (e) {}
@@ -4022,6 +4056,8 @@ function setPreview(imgEl, url) {
 
 function fillSurveyForm(rec) {
     rec = rec || {};
+    // กันเหนียว: ถ้าอยู่โหมดแก้ไข ถอดแผงแผนที่ทิ้งทันที (ไม่ว่าทางเข้าไหน)
+    try { if (window.__surveyEdit) detachHouseMapPanel(); } catch (e) {}
     const addr = rec.address || {};
     document.getElementById('centerId').value = rec.centerId || '';
     document.getElementById('centerName').value = rec.centerName || '';
@@ -4078,8 +4114,8 @@ function fillSurveyForm(rec) {
     document.getElementById('houseLng').value = hl.longitude || '';
     // โหลดข้อมูลเดิมจากชีต = ไม่ใช้ accuracy เดิมมาบล็อก ให้ผู้ใช้ตรวจหมุดเอง
     lastGpsAccuracy = null;
-    document.getElementById('houseMapCoords').textContent =
-        (hl.latitude && hl.longitude) ? ('พิกัดที่เลือก: ' + hl.latitude + ', ' + hl.longitude + ' (ปักหมุดเอง — ตรวจสอบให้ตรงบ้านแล้ว)') : 'ยังไม่ได้เลือกพิกัด';
+    try { var __hmc = document.getElementById('houseMapCoords'); if (__hmc) __hmc.textContent =
+        (hl.latitude && hl.longitude) ? ('พิกัดที่เลือก: ' + hl.latitude + ', ' + hl.longitude + ' (ปักหมุดเอง — ตรวจสอบให้ตรงบ้านแล้ว)') : 'ยังไม่ได้เลือกพิกัด'; } catch (e) {}
     setPreview(document.getElementById('ownerPhotoPreview'), rec.ownerPhotoUrl || rec.ownerPhotoBase64 || '');
     const eps = {owner: rec.ownerPhotoUrl || '', pets: pets.map(function(p) { return p.photoUrl || ''; })};
     if (window.__surveyEdit) window.__surveyEdit.existingPhotos = rec.existingPhotos || eps;
