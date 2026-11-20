@@ -581,7 +581,7 @@ button { min-height: 42px; touch-action: manipulation; }
 #adminPage { display: none; }
 #adminPage.page-hidden { display: none !important; }
 #adminPage.page-visible { display: block !important; }
-.center-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+.center-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; grid-column: 1 / -1; }
 .center-actions .page-button { border: 1.5px solid var(--line); background: #fff; color: var(--brand-deep); }
 .center-actions .page-button:hover { border-color: var(--brand); background: var(--field); }
 .edit-banner { margin: 14px 0 0; padding: 12px 14px; border-radius: 10px; background: #fff8e6; border: 1px solid #ecd27a; font-weight: 700; color: #7a5b00; }
@@ -629,9 +629,6 @@ button { min-height: 42px; touch-action: manipulation; }
 
 </style>
 
-
-</head>
-<body>
 <header>
     <div class="header-brand">
 
@@ -913,6 +910,23 @@ button { min-height: 42px; touch-action: manipulation; }
     class="photo-preview"
     alt="preview">
 
+<style>
+.photo-mode-box{margin:6px 0;padding:8px 10px;background:#f6f1fd;border:1px solid #d9c8f5;border-radius:10px;font-size:13px;line-height:1.5}
+.photo-mode-box .pm-title{font-weight:700;font-size:13px;margin-bottom:4px;color:#5b21b6}
+.photo-mode-box label.pm-opt{display:flex;gap:6px;align-items:center;font-weight:600;margin:3px 0;cursor:pointer;background:#fff;border:1px solid #e5e0f2;border-radius:8px;padding:3px 8px}
+.photo-mode-box label.pm-opt:has(input:checked){border-color:#8e44ad;background:#efe7fb}
+.photo-mode-box input[type=radio]{width:14px;height:14px;margin:0;accent-color:#8e44ad;flex-shrink:0}
+.photo-mode-box[hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<div id="ownerPhotoChoiceBox" class="photo-mode-box" hidden>
+  <div class="pm-title">📷 รูปเจ้าของ</div>
+  <label class="pm-opt"><input type="radio" name="ownerPhotoMode" value="old" checked> ใช้รูปเดิม</label>
+  <label class="pm-opt"><input type="radio" name="ownerPhotoMode" value="new"> อัปโหลดรูปใหม่</label>
+</div>
+
 <input
     type="file"
     id="ownerPhoto"
@@ -923,9 +937,9 @@ button { min-height: 42px; touch-action: manipulation; }
 </div>
 
 
-<section class="house-map-panel" aria-labelledby="houseMapHeading">
+<section class="house-map-panel" id="houseMapPanel" aria-labelledby="houseMapHeading">
   <h3 id="houseMapHeading">เลือกตำแหน่งบ้านที่สำรวจ</h3>
-  <p class="house-map-help">กดใช้ GPS เมื่ออยู่หน้าบ้าน หรือแตะบนแผนที่เพื่อปักหมุดบ้านด้วยตนเอง จากนั้นกรอกบ้านเลขที่</p>
+  <p class="house-map-help">กดใช้ GPS เมื่ออยู่หน้าบ้าน (ความคลาดเคลื่อนต้องไม่เกิน 50 เมตร) หรือแตะบนแผนที่/ลากหมุดให้ตรงตัวบ้านก่อนบันทึก จากนั้นกรอกบ้านเลขที่</p>
   <div class="house-map-actions">
     <button type="button" onclick="useCurrentGPS()">📍 ใช้ตำแหน่ง GPS ปัจจุบัน</button>
     <button type="button" class="secondary" onclick="enableMapPick()">แตะเลือกจุดบนแผนที่</button>
@@ -950,6 +964,10 @@ button { min-height: 42px; touch-action: manipulation; }
     </div>
   </div>
   <div id="houseMapCoords" class="house-map-coords">ยังไม่ได้เลือกพิกัด</div>
+  <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:10px;background:#fff8e1;border:1px solid #e3a72f;border-radius:10px;font-weight:600">
+    <input type="checkbox" id="pinConfirmed" style="width:20px;height:20px;margin-top:2px;flex-shrink:0">
+    <span>ฉันตรวจสอบแล้วว่าหมุดตรงตัวบ้านจริง (ซูมแผนที่ดาวเทียมดูหลังคาแล้ว) — ติ๊กก่อนบันทึกทุกครั้ง</span>
+  </label>
   <div id="mapToast" role="status" aria-live="polite"></div>
   <input type="hidden" id="houseLat" name="houseLat">
   <input type="hidden" id="houseLng" name="houseLng">
@@ -991,7 +1009,7 @@ button { min-height: 42px; touch-action: manipulation; }
     style="background:#eee"
     required>
 
-<label>เบอร์โทรศัพท์</label>
+<label>เบอร์โทรศัพท์ <span style="color:red">*</span></label>
 
 <input
     type="text"
@@ -1210,7 +1228,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbzrrhlbRrsN7eVl2lMr2x7LGT1TqJa_shT_mflTODEwlR8uKyr9z3nCI_qaLJ2OxNJV/exec";
+"https://script.google.com/macros/s/AKfycbxU97elsDOB9zMbs0PchNoIlW3aK_Br4oFRJCSoXLXUFAy8zhv08xZZyl8SqWu276XX/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -1489,6 +1507,10 @@ let houseMarkersLayer = null;
 let housePickMode = false;
 let selectedHouseMarker = null;
 let selectedHouseKey = null;
+// ความคลาดเคลื่อน GPS ครั้งล่าสุด (เมตร). null = ปักหมุดด้วยมือ / ยังไม่มีพิกัด GPS
+let lastGpsAccuracy = null;
+const GPS_MAX_ACCURACY = 50;
+let gpsAccuracyCircle = null;
 const HOUSE_MARKER_STORAGE = 'animalSurveyHouseMarkers_v1';
 const UBON_DEFAULT_CENTER = [15.2287, 104.8564];
 
@@ -1646,53 +1668,117 @@ function initHouseMap() {
             housePickMode = false;
             setHouseMapMessage('ปักหมุดตำแหน่งบ้านแล้ว กรุณากรอกบ้านเลขที่และบันทึกแบบสำรวจ');
         });
+        // สร้างครั้งแรก: วาดหมุดเดิมที่บันทึกไว้ในเครื่อง
+        setTimeout(function() {
+            try { houseMap.invalidateSize(); } catch (e) {}
+            showAllHouseMarkers();
+        }, 180);
     }
+    // หมายเหตุ: showAll อยู่ในบล็อกสร้างครั้งแรกเท่านั้น กันทับข้อความสำคัญ (เช่น คำแนะนำ GPS/โหมดแก้ไข)
+    // ถ้าแผนที่มีอยู่แล้วแค่ขยับขนาด ไม่แตะข้อความ
     setTimeout(function() {
-        houseMap.invalidateSize();
-        showAllHouseMarkers();
+        try { houseMap.invalidateSize(); } catch (e) {}
     }, 180);
 }
 
-function setHouseMapMessage(message) {
+function setHouseMapMessage(message, isError) {
     const el = document.getElementById('houseMapMessage');
-    if (el) el.textContent = message;
+    if (el) {
+        el.textContent = message;
+        el.style.color = isError ? '#b91c1c' : '';
+        el.style.fontWeight = isError ? '700' : '';
+    }
 }
 
-function setSelectedHouseLocation(lat, lng, status) {
+function updateHouseCoordsText(lat, lng) {
+    const acc = lastGpsAccuracy;
+    let txt = 'พิกัดที่เลือก: ' + Number(lat).toFixed(6) + ', ' + Number(lng).toFixed(6);
+    if (acc !== null && acc !== undefined) {
+        txt += ' (GPS ±' + Math.round(acc) + ' ม.)';
+    } else {
+        txt += ' (ปักหมุดเอง — ตรวจสอบให้ตรงบ้านแล้ว)';
+    }
+    document.getElementById('houseMapCoords').textContent = txt;
+}
+
+function setSelectedHouseLocation(lat, lng, status, gpsAccuracy) {
+    // ถ้าส่ง gpsAccuracy มาด้วย = มาจาก GPS, ถ้าไม่ส่ง = มาจากการปักมือ
+    if (gpsAccuracy !== undefined) {
+        lastGpsAccuracy = gpsAccuracy;
+    } else if (status !== 'loaded') {
+        lastGpsAccuracy = null;
+    }
+    // ทุกครั้งที่พิกัดเปลี่ยน บังคับให้ติ๊กยืนยันใหม่ (กันหมุดเก่าค้าง)
+    try { var __pc = document.getElementById('pinConfirmed'); if (__pc) __pc.checked = false; } catch (e) {}
     document.getElementById('houseLat').value = String(parseFloat(Number(lat).toFixed(7)));
     document.getElementById('houseLng').value = String(parseFloat(Number(lng).toFixed(7)));
-    document.getElementById('houseMapCoords').textContent =
-        'พิกัดที่เลือก: ' + Number(lat).toFixed(6) + ', ' + Number(lng).toFixed(6);
+    updateHouseCoordsText(lat, lng);
     if (houseMap) {
         if (selectedHouseMarker) houseMap.removeLayer(selectedHouseMarker);
-        selectedHouseMarker = L.marker([lat, lng], {icon: houseMarkerIcon(status || 'pending')})
+        selectedHouseMarker = L.marker([lat, lng], {icon: houseMarkerIcon(status || 'pending'), draggable: true})
             .addTo(houseMap)
-            .bindPopup('ตำแหน่งบ้านที่เลือก');
-        houseMap.setView([lat, lng], Math.max(houseMap.getZoom(), 17));
+            .bindPopup('ตำแหน่งบ้านที่เลือก (ลากหมุดปรับให้ตรงบ้านได้)');
+        selectedHouseMarker.on('dragend', function() {
+            const p = selectedHouseMarker.getLatLng();
+            document.getElementById('houseLat').value = String(parseFloat(Number(p.lat).toFixed(7)));
+            document.getElementById('houseLng').value = String(parseFloat(Number(p.lng).toFixed(7)));
+            // ลากปรับเอง = ไม่ใช้ค่า accuracy เดิมมาบล็อก แต่ยังต้องติ๊กยืนยันใหม่
+            lastGpsAccuracy = null;
+            try { if (gpsAccuracyCircle && houseMap) { houseMap.removeLayer(gpsAccuracyCircle); gpsAccuracyCircle = null; } } catch (e) {}
+            updateHouseCoordsText(p.lat, p.lng);
+            try { var __pc2 = document.getElementById('pinConfirmed'); if (__pc2) __pc2.checked = false; } catch (e) {}
+            setHouseMapMessage('ปรับหมุดด้วยมือแล้ว ซูมดูดาวเทียมให้ตรงหลังคา แล้วติ๊กยืนยันหมุดก่อนบันทึก');
+        });
+        // กันหมุดเน็ต ±50000 ม. ดึงแผนที่กระโดดไปคนละจังหวัด: ย้ายจอเฉพาะพิกัด GPS จริงเท่านั้น
+        if (gpsAccuracy === undefined || Number(gpsAccuracy) <= 5000) {
+            houseMap.setView([lat, lng], Math.max(houseMap.getZoom(), 18));
+        }
         selectedHouseMarker.openPopup();
     }
 }
 
+function isGpsAccuracyBlocked() {
+    return lastGpsAccuracy !== null && lastGpsAccuracy !== undefined && Number(lastGpsAccuracy) > GPS_MAX_ACCURACY;
+}
+
 function useCurrentGPS() {
     if (!navigator.geolocation) {
-        setHouseMapMessage('อุปกรณ์นี้ไม่รองรับ GPS');
+        setHouseMapMessage('อุปกรณ์นี้ไม่รองรับ GPS', true);
         return;
     }
-    setHouseMapMessage('กำลังค้นหาตำแหน่ง GPS…');
+    if (!houseMap) initHouseMap();
+    setHouseMapMessage('กำลังค้นหาตำแหน่ง GPS… (ออกที่โล่งค้างไว้ 10-20 วินาที)');
     navigator.geolocation.getCurrentPosition(function(pos) {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setSelectedHouseLocation(lat, lng, 'pending');
-        setHouseMapMessage('รับพิกัด GPS แล้ว (ความคลาดเคลื่อนประมาณ ' +
-            Math.round(pos.coords.accuracy) + ' เมตร) ตรวจสอบหมุดให้ตรงบ้านก่อนบันทึก');
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        var acc = Math.round(pos.coords.accuracy || 99999);
+        setSelectedHouseLocation(lat, lng, 'pending', acc);
+        drawGpsAccuracyCircle(lat, lng, acc);
+        if (acc > 5000) {
+            setHouseMapMessage('ตอนนี้ได้แค่ตำแหน่งคร่าวๆ จากเน็ต (±' + acc + ' ม.) — เน็ตอะไรก็ได้ ไม่ต้องรอ! กด “แตะเลือกจุดบนแผนที่” ปักหมุดเองแล้วติ๊กยืนยันหมุด', true);
+        } else if (acc > GPS_MAX_ACCURACY) {
+            setHouseMapMessage('รับพิกัด GPS แล้ว (ความคลาดเคลื่อนประมาณ ' + acc + ' เมตร เกินเกณฑ์ ' + GPS_MAX_ACCURACY + ' เมตร) สลับดูดาวเทียม ลากหมุดให้ตรงหลังคาแล้วติ๊กยืนยันหมุดก่อนบันทึก', true);
+        } else {
+            setHouseMapMessage('รับพิกัด GPS แล้ว (ความคลาดเคลื่อนประมาณ ' + acc + ' เมตร) สลับดูดาวเทียม ลากหมุดให้ตรงหลังคา แล้วติ๊กยืนยันหมุดก่อนบันทึก');
+        }
     }, function(err) {
         const messages = {
             1: 'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง กรุณาอนุญาต Location ในเบราว์เซอร์',
             2: 'ไม่พบตำแหน่ง GPS กรุณาลองอีกครั้งหรือแตะเลือกบนแผนที่',
             3: 'ค้นหา GPS นานเกินไป กรุณาลองอีกครั้ง'
         };
-        setHouseMapMessage(messages[err.code] || 'ไม่สามารถอ่าน GPS ได้');
+        setHouseMapMessage(messages[err.code] || 'ไม่สามารถอ่าน GPS ได้', true);
     }, {enableHighAccuracy: true, timeout: 20000, maximumAge: 0});
+}
+
+function drawGpsAccuracyCircle(lat, lng, acc) {
+    try {
+        if (!houseMap) return;
+        if (gpsAccuracyCircle) { houseMap.removeLayer(gpsAccuracyCircle); gpsAccuracyCircle = null; }
+        // วงเกิน 2 กม. ไม่วาด (จอจะขาว/เพี้ยน) — ถือว่าไม่ใช่ GPS จริง
+        if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(acc)) || acc > 2000) return;
+        gpsAccuracyCircle = L.circle([lat, lng], { radius: Number(acc), color: '#2c3e90', weight: 1, fillOpacity: 0.12 }).addTo(houseMap);
+    } catch (e) {}
 }
 
 function enableMapPick() {
@@ -1712,14 +1798,40 @@ function showAllHouseMarkers() {
     });
     records.forEach(function(r) {
         if (!Number.isFinite(Number(r.lat)) || !Number.isFinite(Number(r.lng))) return;
+        const isPending = r.status !== 'surveyed';
         const marker = L.marker([Number(r.lat), Number(r.lng)], {
-            icon: houseMarkerIcon(r.status)
+            icon: houseMarkerIcon(r.status),
+            draggable: isPending
         }).addTo(houseMarkersLayer);
         marker.bindPopup(
             '<b>บ้านเลขที่: </b>' + escapeHouseMapText(r.addrNo || '-') +
             '<br><b>ชุมชน: </b>' + escapeHouseMapText(r.community || '-') +
-            '<br><b>สถานะ: </b>' + (r.status === 'surveyed' ? 'สำรวจแล้ว' : 'ยังไม่ได้สำรวจ')
+            '<br><b>สถานะ: </b>' + (r.status === 'surveyed' ? 'สำรวจแล้ว' : 'ยังไม่ได้สำรวจ') +
+            (isPending ? '<br><i>ลากหมุดนี้เลื่อนปรับตำแหน่งได้</i>' : '')
         );
+        marker.on('dragend', function() {
+            try {
+                var p = marker.getLatLng();
+                var recs = getHouseMarkerRecords();
+                var idx = recs.findIndex(function(x) { return x.key === r.key; });
+                if (idx >= 0) {
+                    recs[idx].lat = parseFloat(Number(p.lat).toFixed(7));
+                    recs[idx].lng = parseFloat(Number(p.lng).toFixed(7));
+                    recs[idx].updatedAt = new Date().toISOString();
+                    saveHouseMarkerRecords(recs);
+                }
+                if (selectedHouseKey === r.key ||
+                    document.getElementById('addrNo').value.trim() === (r.addrNo || '')) {
+                    document.getElementById('houseLat').value = String(parseFloat(Number(p.lat).toFixed(7)));
+                    document.getElementById('houseLng').value = String(parseFloat(Number(p.lng).toFixed(7)));
+                    lastGpsAccuracy = null;
+                    updateHouseCoordsText(p.lat, p.lng);
+                    try { var __dpc = document.getElementById('pinConfirmed'); if (__dpc) __dpc.checked = false; } catch (e) {}
+                }
+                setHouseMapMessage('เลื่อนหมุดบ้านเลขที่ ' + (r.addrNo || '-') + ' แล้ว อย่าลืมติ๊กยืนยันหมุดก่อนบันทึก');
+                showMapToast('เลื่อนหมุดบ้านเลขที่ ' + (r.addrNo || '-') + ' แล้ว');
+            } catch (e) {}
+        });
         marker.on('click', function() {
             selectedHouseKey = r.key;
             document.getElementById('addrNo').value = r.addrNo || '';
@@ -1729,8 +1841,9 @@ function showAllHouseMarkers() {
             }
             document.getElementById('houseLat').value = r.lat;
             document.getElementById('houseLng').value = r.lng;
-            document.getElementById('houseMapCoords').textContent =
-                'พิกัดที่เลือก: ' + Number(r.lat).toFixed(6) + ', ' + Number(r.lng).toFixed(6);
+            // เลือกหมุดเดิมที่เคยบันทึก = ผู้ใช้เห็นตำแหน่งแล้ว ไม่ใช้ accuracy เดิมมาบล็อก
+            lastGpsAccuracy = null;
+            updateHouseCoordsText(r.lat, r.lng);
             setHouseMapMessage('เลือกหมุดบ้านเลขที่ ' + (r.addrNo || '-') + ' แล้ว กดปุ่มลบแล้วใส่รหัสเพื่อลบหมุดนี้');
         });
     });
@@ -1751,6 +1864,19 @@ function savePendingHouseMarker() {
     if (!community) { setHouseMapMessage('กรุณาเลือกชุมชนก่อนบันทึกหมุด'); return; }
     if (!addrNo) { setHouseMapMessage('กรุณากรอกบ้านเลขที่ก่อนบันทึกหมุด'); return; }
     if (!lat || !lng) { setHouseMapMessage('กรุณาใช้ GPS หรือแตะเลือกตำแหน่งบนแผนที่ก่อน'); return; }
+    if (isGpsAccuracyBlocked()) {
+        setHouseMapMessage('⚠️ ความคลาดเคลื่อน GPS ±' + Math.round(lastGpsAccuracy) + ' เมตร เกินเกณฑ์ ' + GPS_MAX_ACCURACY + ' เมตร ห้ามบันทึก! กด GPS ใหม่กลางแจ้ง หรือลากหมุดให้ตรงบ้านก่อน', true);
+        alert('ความคลาดเคลื่อน GPS ±' + Math.round(lastGpsAccuracy) + ' เมตร เกินเกณฑ์ ' + GPS_MAX_ACCURACY + ' เมตร\nกรุณากด GPS ใหม่หรือลากหมุดให้ตรงบ้านก่อนบันทึก');
+        if (document.getElementById('houseMap')) document.getElementById('houseMap').scrollIntoView({behavior: 'smooth', block: 'center'});
+        return;
+    }
+    var pinOk = document.getElementById('pinConfirmed');
+    if (!pinOk || !pinOk.checked) {
+        setHouseMapMessage('⚠️ กรุณาซูมดูดาวเทียม ลากหมุดให้ตรงตัวบ้าน แล้วติ๊ก “ตรวจสอบหมุดตรงบ้านแล้ว” ก่อนบันทึก', true);
+        alert('กรุณาติ๊ก “ฉันตรวจสอบแล้วว่าหมุดตรงตัวบ้านจริง” ก่อนบันทึก');
+        if (document.getElementById('houseMap')) document.getElementById('houseMap').scrollIntoView({behavior: 'smooth', block: 'center'});
+        return;
+    }
     rememberHouseMarker('pending');
     setHouseMapMessage('บันทึกหมุดบ้านเลขที่ ' + addrNo + ' เป็นสถานะยังไม่ได้สำรวจแล้ว');
 }
@@ -1758,6 +1884,7 @@ function savePendingHouseMarker() {
 function showMapToast(msg){ try{ var t=document.getElementById('mapToast'); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(window.__mapToastTimer); window.__mapToastTimer=setTimeout(function(){ t.classList.remove('show'); }, 5000); }catch(e){} }
 function removeLocalHouseMarker(kept, addrNo) {
     saveHouseMarkerRecords(kept);
+    lastGpsAccuracy = null;
     if (selectedHouseMarker && houseMap) {
         houseMap.removeLayer(selectedHouseMarker);
         selectedHouseMarker = null;
@@ -2053,6 +2180,12 @@ function createPetCard(no) {
 
 <img
     class="petPhotoPreview photo-preview">
+
+<div class="petPhotoChoice photo-mode-box" hidden>
+  <div class="pm-title">📷 รูปตัวนี้</div>
+  <label class="pm-opt"><input type="radio" class="petPhotoMode" name="petPhotoMode_${no}" value="old" checked> ใช้รูปเดิม</label>
+  <label class="pm-opt"><input type="radio" class="petPhotoMode" name="petPhotoMode_${no}" value="new"> อัปโหลดรูปใหม่</label>
+</div>
 
 <input
     type="file"
@@ -2362,6 +2495,60 @@ ownerPhoto.addEventListener(
     }
 );
 
+/* =====================================================
+   โหมดแก้ไข: เลือกรูปเก่า/ใหม่ (เจ้าของ + สัตว์)
+===================================================== */
+function getOwnerPhotoMode() {
+    var r = document.querySelector('input[name="ownerPhotoMode"]:checked');
+    return r ? r.value : 'new';
+}
+function refreshOwnerPhotoMode() {
+    var box = document.getElementById('ownerPhotoChoiceBox');
+    var hasOld = !!(window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.owner);
+    if (!box) return;
+    box.hidden = !hasOld;
+    if (!hasOld) {
+        ownerPhoto.required = true;
+        ownerPhoto.style.display = '';
+        try { var rNew = document.querySelector('input[name="ownerPhotoMode"][value="new"]'); if (rNew) rNew.checked = true; } catch (e) {}
+        return;
+    }
+    var mode = getOwnerPhotoMode();
+    if (mode === 'old') {
+        ownerPhoto.required = false;
+        ownerPhoto.style.display = 'none';
+        ownerPhoto.value = '';
+    } else {
+        ownerPhoto.required = true;
+        ownerPhoto.style.display = '';
+    }
+}
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.name === 'ownerPhotoMode') refreshOwnerPhotoMode();
+    if (e.target && e.target.classList && e.target.classList.contains('petPhotoMode')) {
+        var card = e.target.closest('.pet-card');
+        if (!card) return;
+        var fileInput = card.querySelector('.petPhoto');
+        if (e.target.value === 'old') { if (fileInput) { fileInput.value = ''; fileInput.style.display = 'none'; fileInput.required = false; } }
+        else { if (fileInput) { fileInput.style.display = ''; fileInput.required = true; } }
+    }
+});
+function refreshPetPhotoModes() {
+    var cards = document.querySelectorAll('.pet-card');
+    cards.forEach(function(card, i) {
+        var hasOld = !!(window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.pets && window.__surveyEdit.existingPhotos.pets[i]);
+        var choice = card.querySelector('.petPhotoChoice');
+        var fileInput = card.querySelector('.petPhoto');
+        if (!choice || !fileInput) return;
+        choice.hidden = !hasOld;
+        if (!hasOld) { fileInput.style.display = ''; return; }
+        var sel = card.querySelector('.petPhotoMode:checked');
+        var mode = sel ? sel.value : 'old';
+        if (mode === 'old') { fileInput.value = ''; fileInput.style.display = 'none'; }
+        else { fileInput.style.display = ''; }
+    });
+}
+
 
 /* =====================================================
    จำกัดชื่อผู้สำรวจ
@@ -2473,10 +2660,21 @@ document
         const phone =
             document.getElementById('phone');
 
-        if (!/^\d{10}$/.test(phone.value)) {
+        // เบอร์มือถือจำเป็นต้องกรอก (เบอร์บ้านไม่บังคับ — ไม่มีด่านตรวจ)
+        if (!phone.value.trim()) {
 
             alert(
-                'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก'
+                'กรุณากรอกเบอร์โทรศัพท์มือถือ (จำเป็นต้องกรอก)'
+            );
+
+            phone.focus();
+            return;
+        }
+
+        if (!/^0\d{9}$/.test(phone.value)) {
+
+            alert(
+                'กรุณากรอกเบอร์โทรศัพท์มือถือ 10 หลัก ขึ้นต้นด้วย 0 (เช่น 0812345678)'
             );
 
             phone.focus();
@@ -2549,20 +2747,56 @@ document
                     block: 'center'
                 });
 
+            // กันเหนียว: เผื่อแผงแผนที่ถูกซ่อนแล้วค่าหาย ให้โชว์ก่อนปัก
+            try { var __hpnl = document.getElementById('houseMapPanel'); if (__hpnl) __hpnl.hidden = false; } catch (e) {}
             enableMapPick();
+            return;
+        }
+
+        // บล็อกถ้า GPS คลาดเคลื่อนเกิน 50 เมตร (เช่น 50000 เมตร = ยังไม่จับดาวเทียม)
+        if (typeof isGpsAccuracyBlocked === 'function' && isGpsAccuracyBlocked()) {
+            alert(
+                '⚠️ ความคลาดเคลื่อน GPS ±' + Math.round(lastGpsAccuracy) + ' เมตร เกินเกณฑ์ ' + GPS_MAX_ACCURACY + ' เมตร ห้ามบันทึก!\n\n' +
+                '1) ออกกลางแจ้งค้างไว้แล้วกด GPS ใหม่อีกครั้ง\n' +
+                '2) หรือซูมแผนที่แล้วลากหมุดให้ตรงตัวบ้านก่อนบันทึก'
+            );
+            setHouseMapMessage('⚠️ ความคลาดเคลื่อน ±' + Math.round(lastGpsAccuracy) + ' เมตร เกินเกณฑ์ ' + GPS_MAX_ACCURACY + ' เมตร ห้ามบันทึก! กด GPS ใหม่หรือลากหมุดให้ตรงบ้าน', true);
+            document.getElementById('houseMap')
+                .scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            return;
+        }
+
+        // บังคับติ๊กยืนยันว่าตรวจหมุดตรงบ้านแล้ว (กัน GPS ดีแต่หมุดผิดหลัง)
+        // ยกเว้นโหมดแก้ไขที่ซ่อนแผนที่ (ใช้พิกัดเดิม ติ๊กไม่ได้เพราะไม่มีช่องติ๊ก)
+        var __pinOk = document.getElementById('pinConfirmed');
+        var __mapHidden = (function() { var p = document.getElementById('houseMapPanel'); return !!(p && p.hidden); })();
+        if (!(window.__surveyEdit && __mapHidden) && (!__pinOk || !__pinOk.checked)) {
+            alert('กรุณาซูมแผนที่ดาวเทียมดูหลังคา ลากหมุดให้ตรงตัวบ้าน แล้วติ๊ก “ฉันตรวจสอบแล้วว่าหมุดตรงตัวบ้านจริง” ก่อนบันทึก');
+            setHouseMapMessage('⚠️ ยังไม่ได้ติ๊กยืนยันหมุดตรงบ้าน ห้ามบันทึก! ซูมดูดาวเทียมแล้วติ๊กก่อน', true);
+            document.getElementById('houseMap')
+                .scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
             return;
         }
 
 
         /* ===============================
-           รูปเจ้าของ
+           รูปเจ้าของ (โหมดแก้ไข: เก่าได้/ใหม่ต้องอัป)
         =============================== */
 
-        const __isEditPhoto = !!(window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.owner);
-        if (!ownerPhoto.files.length && !__isEditPhoto) {
+        var __ownerMode = (typeof getOwnerPhotoMode === 'function' && window.__surveyEdit) ? getOwnerPhotoMode() : 'new';
+        var __isEditPhoto = !!(window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.owner);
+        if (__isEditPhoto && __ownerMode === 'old') {
+            // ใช้รูปเดิม ไม่ต้องตรวจไฟล์
+        } else if (!ownerPhoto.files.length) {
 
             alert(
-                'กรุณาอัปโหลดรูปโปรไฟล์เจ้าของสัตว์เลี้ยง'
+                __isEditPhoto ? 'เลือกอัปโหลดรูปใหม่แล้ว กรุณาเลือกไฟล์รูปเจ้าของ' : 'กรุณาอัปโหลดรูปโปรไฟล์เจ้าของสัตว์เลี้ยง'
             );
 
             ownerPhoto.focus();
@@ -2611,11 +2845,15 @@ document
                     );
 
 
+                var __modeSel = card.querySelector('.petPhotoMode:checked');
+                var __petMode = (__modeSel && window.__surveyEdit) ? __modeSel.value : 'new';
                 const __oldPetPhoto = window.__surveyEdit && window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.pets && window.__surveyEdit.existingPhotos.pets[i];
-                if (!photo.files.length && !__oldPetPhoto) {
+                if (__oldPetPhoto && __petMode === 'old') {
+                    // ใช้รูปเดิม ไม่ต้องตรวจไฟล์
+                } else if (!photo.files.length) {
 
                     alert(
-                        `สัตว์ตัวที่ ${i + 1} : กรุณาอัปโหลดรูปภาพ`
+                        (__oldPetPhoto ? 'สัตว์ตัวที่ ' + (i + 1) + ' เลือกอัปใหม่แล้ว กรุณาเลือกไฟล์รูปภาพ' : 'สัตว์ตัวที่ ' + (i + 1) + ' : กรุณาอัปโหลดรูปภาพ')
                     );
 
                     photo.focus();
@@ -2827,16 +3065,18 @@ document
 
 
         /* ===============================
-           อ่านรูปเจ้าของ
+           อ่านรูปเจ้าของ (โหมดแก้ไขเลือกเก่า = ส่งว่างให้ใช้รูปเดิม)
         =============================== */
 
+        var __ownerModeSend = (typeof getOwnerPhotoMode === 'function' && window.__surveyEdit) ? getOwnerPhotoMode() : 'new';
         const ownerBase64 =
-            ownerPhoto.files[0] ?
+            (__ownerModeSend === 'old') ? '' :
+            (ownerPhoto.files[0] ?
             await compressImage(
                 ownerPhoto.files[0],
                 1024,
                 0.8
-            ) : '';
+            ) : '');
 
 
         /* ===============================
@@ -2854,6 +3094,13 @@ document
             i++
         ) {
 
+            var __pm = petCards[i].querySelector('.petPhotoMode:checked');
+            var __pmVal = (__pm && window.__surveyEdit) ? __pm.value : 'new';
+            if (__pmVal === 'old') {
+                pets[i].petPhotoBase64 = '';
+                pets[i].useOldPhoto = true;
+                continue;
+            }
             const file =
                 petCards[i]
                 .querySelector(
@@ -3675,7 +3922,7 @@ async function loadSurveyorFromServer() {
         const d = (result && typeof result.message === 'object') ? result.message : null;
         if (!result || result.status !== 'success' || !d || typeof d.totalHouses !== 'number') {
             const msg = (result && typeof result.message === 'string') ? result.message : 'ไม่ทราบสาเหตุ';
-            setStatMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return 'โหลดไม่สำเร็จ: ' + raw; })(msg));
+            setStatMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return 'โหลดไม่สำเร็จ: ' + raw; })(msg));
             return;
         }
         const seen = {};
@@ -3700,17 +3947,52 @@ function enterEditMode(rec, key) {
     document.getElementById('saveButton').textContent = 'ส่งคำขอแก้ไข';
     var __erb = document.getElementById('editReasonBox');
     if (__erb) { __erb.hidden = false; var __er = document.getElementById('editReason'); if (__er) __er.value = ''; }
+    // รีเซ็ตติ๊กยืนยันหมุด + โชว์ตัวเลือกรูป
+    try { var __pc = document.getElementById('pinConfirmed'); if (__pc) __pc.checked = false; } catch (e) {}
+    try { if (typeof refreshOwnerPhotoMode === 'function') refreshOwnerPhotoMode(); } catch (e) {}
+    try { if (typeof refreshPetPhotoModes === 'function') setTimeout(refreshPetPhotoModes, 50); } catch (e) {}
+    // โหมดแก้ไข: ถ้ามีพิกัดเดิมให้ซ่อนแผนที่ทั้งแผง (ใช้ค่าพิกัดเดิมส่งต่อ ไม่ต้องปักใหม่)
+    // ถ้าไม่มีพิกัดเดิม คงแผนที่ไว้ให้ปักหมุดใหม่ (ไม่งั้นส่งไม่ผ่านด่านพิกัด)
+    try {
+        var __hl = (rec.houseLocation || {});
+        var __la = parseFloat(__hl.latitude), __ln = parseFloat(__hl.longitude);
+        var __panel = document.getElementById('houseMapPanel');
+        if (Number.isFinite(__la) && Number.isFinite(__ln)) {
+            if (__panel) __panel.hidden = true;
+            try { var __ebt = document.getElementById('editBannerText'); if (__ebt) __ebt.textContent += ' — ใช้พิกัดเดิม ไม่ต้องปักหมุดใหม่'; } catch (e) {}
+        } else {
+            if (__panel) {
+                __panel.hidden = false;
+                setTimeout(function() { try { if (houseMap) houseMap.invalidateSize(); } catch (e) {} }, 150);
+            }
+            setTimeout(function() {
+                try {
+                    if (typeof initHouseMap === 'function') initHouseMap();
+                    if (typeof enableMapPick === 'function') enableMapPick();
+                    setHouseMapMessage('บ้านหลังนี้ยังไม่มีหมุดเดิม กรุณากด GPS หรือแตะบนแผนที่เพื่อปักหมุดใหม่ แล้วติ๊กยืนยันหมุดก่อนส่ง');
+                } catch (e) {}
+            }, 500);
+        }
+    } catch (e) {}
     showPage('formPage');
     window.scrollTo(0, 0);
 }
 
 function exitEditMode() {
     window.__surveyEdit = null;
+    // คืนแผนที่ (โหมดสำรวจใหม่ต้องเห็นแผนที่เสมอ) + ขยับขนาดเผื่อ Leaflet ค้าง
+    try { var __hp = document.getElementById('houseMapPanel'); if (__hp) __hp.hidden = false; } catch (e) {}
+    try { setTimeout(function() { try { if (typeof houseMap !== 'undefined' && houseMap) houseMap.invalidateSize(); } catch (e) {} }, 120); } catch (e) {}
+    // กันเหนียว: ซ่อนกล่องเลือกรูปทันที (โหมดสำรวจใหม่ต้องไม่มีกล่องนี้)
+    try { var __ocb = document.getElementById('ownerPhotoChoiceBox'); if (__ocb) __ocb.hidden = true; } catch (e) {}
+    try { document.querySelectorAll('.petPhotoChoice').forEach(function(el) { el.hidden = true; }); } catch (e) {}
     try{ var __erb2 = document.getElementById('editReasonBox'); if (__erb2) __erb2.hidden = true; }catch(e){}
     const banner = document.getElementById('editBanner');
     if (banner) banner.hidden = true;
     const btn = document.getElementById('saveButton');
     if (btn) btn.textContent = 'บันทึกข้อมูล';
+    try { if (typeof refreshOwnerPhotoMode === 'function') refreshOwnerPhotoMode(); } catch (e) {}
+    try { if (typeof refreshPetPhotoModes === 'function') refreshPetPhotoModes(); } catch (e) {}
 }
 
 function setSelectValue(el, value) {
@@ -3800,11 +4082,37 @@ function fillSurveyForm(rec) {
     const hl = rec.houseLocation || {};
     document.getElementById('houseLat').value = hl.latitude || '';
     document.getElementById('houseLng').value = hl.longitude || '';
+    // โหลดข้อมูลเดิมจากชีต = ไม่ใช้ accuracy เดิมมาบล็อก ให้ผู้ใช้ตรวจหมุดเอง
+    lastGpsAccuracy = null;
     document.getElementById('houseMapCoords').textContent =
-        (hl.latitude && hl.longitude) ? ('พิกัดที่เลือก: ' + hl.latitude + ', ' + hl.longitude) : 'ยังไม่ได้เลือกพิกัด';
+        (hl.latitude && hl.longitude) ? ('พิกัดที่เลือก: ' + hl.latitude + ', ' + hl.longitude + ' (ปักหมุดเอง — ตรวจสอบให้ตรงบ้านแล้ว)') : 'ยังไม่ได้เลือกพิกัด';
     setPreview(document.getElementById('ownerPhotoPreview'), rec.ownerPhotoUrl || rec.ownerPhotoBase64 || '');
     const eps = {owner: rec.ownerPhotoUrl || '', pets: pets.map(function(p) { return p.photoUrl || ''; })};
     if (window.__surveyEdit) window.__surveyEdit.existingPhotos = rec.existingPhotos || eps;
+    // ตั้งค่าเริ่มต้นตัวเลือกรูป: เก่าถ้ามีรูปเดิม
+    try {
+        if (window.__surveyEdit) {
+            var __hasOwner = !!(window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.owner);
+            var __rOld = document.querySelector('input[name="ownerPhotoMode"][value="old"]');
+            var __rNew = document.querySelector('input[name="ownerPhotoMode"][value="new"]');
+            if (__hasOwner && __rOld) __rOld.checked = true;
+            else if (__rNew) __rNew.checked = true;
+        }
+    } catch (e) {}
+    try { if (typeof refreshOwnerPhotoMode === 'function') setTimeout(refreshOwnerPhotoMode, 50); } catch (e) {}
+    try {
+        if (window.__surveyEdit) {
+            setTimeout(function() {
+                var __cards = document.querySelectorAll('.pet-card');
+                __cards.forEach(function(__card, __i) {
+                    var __hasOld = !!(window.__surveyEdit.existingPhotos && window.__surveyEdit.existingPhotos.pets && window.__surveyEdit.existingPhotos.pets[__i]);
+                    var __olds = __card.querySelectorAll('.petPhotoMode');
+                    __olds.forEach(function(__r) { __r.checked = (__r.value === 'old' && __hasOld) || (__r.value === 'new' && !__hasOld); });
+                });
+                if (typeof refreshPetPhotoModes === 'function') refreshPetPhotoModes();
+            }, 60);
+        }
+    } catch (e) {}
 }
 
 /* ================= ADD-ON v8 : vaccine + approval (frontend) ================= */
@@ -3891,7 +4199,7 @@ window.loadVaccineDue = async function(){
     var result = JSON.parse(await res.text());
     var d = (result && typeof result.message === 'object') ? result.message : null;
     if(!result || result.status !== 'success' || !d){
-      if(msg) msg.textContent = (function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return 'โหลดไม่สำเร็จ: ' + (raw || 'ไม่ทราบสาเหตุ'); })((result && result.message));
+      if(msg) msg.textContent = (function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return 'โหลดไม่สำเร็จ: ' + (raw || 'ไม่ทราบสาเหตุ'); })((result && result.message));
       return;
     }
     var items = d.items || [];
@@ -3995,8 +4303,8 @@ function setAdminMsg(t){
   if(el) el.textContent = t || '';
 }
 function isLegacyGasMsg(m){ return typeof m === 'string' && m.indexOf('กรุณาระบุชื่อศูนย์บริการและชุมชน') !== -1; }
-function legacyGasHint(){ return 'เซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า (ยังไม่มีคำสั่ง approval/vaccine) วิธีแก้: เปิด Apps Script \u2192 วางโค้ดไฟล์ Code_8_APPROVAL_VACCINE_1_.gs ทับของเดิมทั้งหมด \u2192 Deploy \u2192 Manage deployments \u2192 Edit \u2192 Version: New version \u2192 Deploy แล้วกลับมากดโหลดใหม่'; }
-function friendlyLoadMsg(raw, fallback){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return (fallback || 'โหลดไม่สำเร็จ: ') + (raw || 'ไม่ทราบสาเหตุ'); }
+function legacyGasHint(){ return 'โหลดไม่สำเร็จ'; }
+function friendlyLoadMsg(raw, fallback){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return (fallback || 'โหลดไม่สำเร็จ: ') + (raw || 'ไม่ทราบสาเหตุ'); }
 window.loadPendingList = async function(statusMode){
   var code = adminCode();
   if(!code){ setAdminMsg('กรุณากรอกรหัสแอดมินก่อน'); return; }
@@ -4008,7 +4316,7 @@ window.loadPendingList = async function(statusMode){
     var result = JSON.parse(await res.text());
     var d = (result && typeof result.message === 'object') ? result.message : null;
     if(!result || result.status !== 'success' || !d){
-      setAdminMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ: ' + legacyGasHint(); return 'โหลดไม่สำเร็จ: ' + (raw || 'รหัสผิดหรือเซิร์ฟเวอร์ขัดข้อง'); })((result && result.message)));
+      setAdminMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return 'โหลดไม่สำเร็จ: ' + (raw || 'รหัสผิดหรือเซิร์ฟเวอร์ขัดข้อง'); })((result && result.message)));
       return;
     }
     var items = d.items || [];
@@ -4115,7 +4423,7 @@ window.loadMyRequests = async function(){
     var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'getMyEditRequests', requestedBy: who})});
     var result = JSON.parse(await res.text());
     var d = (result && typeof result.message === 'object') ? result.message : null;
-    if(!result || result.status !== 'success' || !d){ var _raw = (result && result.message); document.getElementById('myReqMsg').textContent = (typeof _raw === 'string' && isLegacyGasMsg(_raw)) ? ('ตรวจสอบไม่สำเร็จ: ' + legacyGasHint()) : ('ตรวจสอบไม่สำเร็จ: ' + (_raw || 'ไม่ทราบสาเหตุ')); return; }
+    if(!result || result.status !== 'success' || !d){ var _raw = (result && result.message); document.getElementById('myReqMsg').textContent = (typeof _raw === 'string' && isLegacyGasMsg(_raw)) ? 'ตรวจสอบไม่สำเร็จ' : ('ตรวจสอบไม่สำเร็จ: ' + (_raw || 'ไม่ทราบสาเหตุ')); return; }
     var items = d.items || [];
     if(!items.length){ document.getElementById('myReqMsg').textContent = 'ไม่พบคำขอของชื่อนี้'; document.getElementById('myReqList').innerHTML=''; return; }
     document.getElementById('myReqMsg').textContent = 'พบ '+items.length+' คำขอ';
@@ -4166,6 +4474,7 @@ document.addEventListener('change', function(e){
 updateOutboxBadge();
 
 </script>
+
 
 
 </body>
