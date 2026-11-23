@@ -620,6 +620,10 @@ button { min-height: 42px; touch-action: manipulation; }
 .diff-same{color:var(--muted)}
 .diff-changed{background:#fff8e6;font-weight:700}
 .admin-bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.admin-bar button{border:0;border-radius:9px;padding:10px 14px;background:#2c3e90;color:#fff;font:inherit;cursor:pointer;min-height:42px;touch-action:manipulation}
+.admin-bar button.secondary{background:#56627f}
+.admin-bar button:hover{filter:brightness(1.07)}
+@media(max-width:600px){.admin-bar button{flex:1 1 100%;min-height:46px;padding:11px 14px;font-size:15px}}
 #editReasonBox{margin-top:12px;padding:12px;background:#f3eefc;border:1px dashed #8e44ad;border-radius:10px}
 #editReason{width:100%;min-height:70px;font:inherit;padding:10px;border-radius:8px;border:1.5px solid var(--line);box-sizing:border-box}
 #adminPasscode,#deletePasscode{font-family:system-ui,-apple-system,Arial,sans-serif !important;letter-spacing:3px;}
@@ -1159,7 +1163,7 @@ button { min-height: 42px; touch-action: manipulation; }
 <p id="vaxMsg" class="house-map-message"></p>
 <div id="vaxSummary" class="house-map-message"></div>
 <div style="overflow-x:auto"><table class="vax-table" id="vaxTable" hidden>
-<thead><tr><th>สถานะ</th><th>ครบกำหนด</th><th>สัตว์</th><th>บ้าน / เจ้าของ</th><th>โทร</th><th>ฉีดล่าสุด</th></tr></thead>
+<thead><tr><th>สถานะ</th><th>ครบกำหนด</th><th>สัตว์</th><th>บ้านเลขที่ / เจ้าของ</th><th>โทร</th><th>ฉีดล่าสุด</th></tr></thead>
 <tbody id="vaxBody"></tbody>
 </table></div>
 <div id="vaxCards"></div>
@@ -4281,7 +4285,7 @@ window.loadVaccineDue = async function(){
         return '<tr><td>'+v8statusPill(it.daysLeft)+'</td>' +
           '<td><b>'+v8esc(it.dueDate)+'</b></td>' +
           '<td><b>'+v8esc(it.petName || '(ไม่ระบุชื่อ)')+'</b><br><span style="color:#5d6785">'+v8esc(it.animalType||'')+'</span></td>' +
-          '<td>บ้าน '+v8esc(it.addrNo||'-')+' '+v8esc(it.community||'')+'<br>'+v8esc(it.owner||'')+'</td>' +
+          '<td>บ้านเลขที่ '+v8esc(it.addrNo||'-')+' '+v8esc(it.community||'')+'<br>'+v8esc(it.owner||'')+'</td>' +
           '<td><a href="tel:'+v8esc(it.phone||'')+'">'+v8esc(it.phone||'-')+'</a></td>' +
           '<td>'+v8esc(it.lastDate||'')+'</td></tr>';
       }).join('');
@@ -4291,7 +4295,7 @@ window.loadVaccineDue = async function(){
       cards.innerHTML = items.slice(0, 100).map(function(it){
         return '<div class="pending-card" style="border-left-color:'+(it.daysLeft<0?'#a31212':(it.daysLeft<=7?'#e3a72f':'#2c3e90'))+'">' +
           '<div>'+v8statusPill(it.daysLeft)+' <b>ครบ '+v8esc(it.dueDate)+'</b></div>' +
-          '<div style="margin-top:6px"><b>'+v8esc(it.petName||'(ไม่ระบุชื่อ)')+'</b> ('+v8esc(it.animalType||'')+') — บ้าน '+v8esc(it.addrNo||'-')+' '+v8esc(it.community||'')+'</div>' +
+          '<div style="margin-top:6px"><b>'+v8esc(it.petName||'(ไม่ระบุชื่อ)')+'</b> ('+v8esc(it.animalType||'')+') — บ้านเลขที่ '+v8esc(it.addrNo||'-')+' '+v8esc(it.community||'')+'</div>' +
           '<div style="color:#5d6785;font-size:13px">เจ้าของ: '+v8esc(it.owner||'-')+' · โทร '+v8esc(it.phone||'-')+' · ฉีดล่าสุด '+v8esc(it.lastDate||'-')+'</div></div>';
       }).join('');
     }
@@ -4318,15 +4322,43 @@ window.enableVaxNotify = async function(){
   }catch(e){ alert('เปิดแจ้งเตือนไม่สำเร็จ'); }
 };
 
-function updateVaxBadge(){
+function paintVaxBadge(n){
   try{
-    var raw = localStorage.getItem(VAX_COUNT_KEY);
-    var n = 0;
-    if(raw){ try{ n = JSON.parse(raw).n || 0; }catch(e){} }
     document.querySelectorAll('[data-vax-count]').forEach(function(el){
       el.textContent = n > 0 ? ('('+n+')') : '';
     });
   }catch(e){}
+}
+var VAX_BADGE_TTL = 6*60*60*1000; /* แคชเลขป้ายเตือนมีอายุ 6 ชม. */
+function updateVaxBadge(){
+  var n = 0, stale = true;
+  try{
+    var raw = localStorage.getItem(VAX_COUNT_KEY);
+    if(raw){ var o = JSON.parse(raw); if(Date.now()-(o.t||0) < VAX_BADGE_TTL){ n = o.n||0; stale = false; } }
+  }catch(e){}
+  paintVaxBadge(n);
+  if(stale) refreshVaxBadgeSilent();
+  return n;
+}
+window.updateVaxBadge = updateVaxBadge;
+/* ดึงเลขป้ายเตือนใหม่เงียบๆ หลังเปิดหน้า (รีเฟชแล้วเลขตรงกับชีต ถ้าไม่มีค้างแล้วป้ายจะหายไปเอง) */
+function refreshVaxBadgeSilent(){
+  try{
+    if(window.__vaxBadgeFetching) return; window.__vaxBadgeFetching = true;
+    fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'getVaccineDue', centerName:'', community:'', daysAhead:7, overdueDays:180, limit:2000})})
+      .then(function(r){ return r.text(); })
+      .then(function(txt){
+        var result = null; try{ result = JSON.parse(txt); }catch(e){}
+        var d = (result && typeof result.message === 'object') ? result.message : null;
+        if(result && result.status === 'success' && d){
+          var nn = ((d.counts && ((d.counts.overdue||0)+(d.counts.due7||0))) || 0);
+          try{ localStorage.setItem(VAX_COUNT_KEY, JSON.stringify({t: Date.now(), n: nn})); }catch(e){}
+          paintVaxBadge(nn);
+        }
+      })
+      .catch(function(){})
+      .then(function(){ window.__vaxBadgeFetching = false; });
+  }catch(e){ try{ window.__vaxBadgeFetching = false; }catch(_){} }
 }
 try{ setTimeout(updateVaxBadge, 500); }catch(e){}
 
