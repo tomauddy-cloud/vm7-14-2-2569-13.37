@@ -582,6 +582,9 @@ button { min-height: 42px; touch-action: manipulation; }
 #adminPage { display: none; }
 #adminPage.page-hidden { display: none !important; }
 #adminPage.page-visible { display: block !important; }
+#approvePage { display: none; }
+#approvePage.page-hidden { display: none !important; }
+#approvePage.page-visible { display: block !important; }
 .center-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; grid-column: 1 / -1; }
 .center-actions .page-button { border: 1.5px solid var(--line); background: #fff; color: var(--brand-deep); }
 .center-actions .page-button:hover { border-color: var(--brand); background: var(--field); }
@@ -1183,7 +1186,31 @@ button { min-height: 42px; touch-action: manipulation; }
 <input id="adminPasscode" type="password" inputmode="text" placeholder="กรอกรหัสแอดมิน" autocomplete="current-password">
 <div class="admin-bar">
 <button type="button" onclick="adminLogin()">🔑 เข้าสู่ระบบ</button>
-<button type="button" class="secondary" onclick="loadPendingList()">🔄 โหลดคิวรออนุมัติ</button>
+</div>
+<p class="house-map-help">รหัสจะจำไว้ในเครื่องนี้เท่านั้น (sessionStorage) ปิดแท็บแล้วต้องกรอกใหม่</p>
+</section>
+<p id="adminLoginMsg" class="house-map-message"></p>
+<hr style="margin:22px 0;border:0;border-top:1px solid var(--line)">
+<h3>📤 สถานะคำขอของฉัน (ผู้ขอแก้ไขตรวจสอบเอง)</h3>
+<section class="search-panel" aria-label="สถานะคำขอ">
+<label>ชื่อผู้ขอ (ต้องตรงกับชื่อผู้บันทึกตอนส่งคำขอ)</label>
+<input id="myReqName" maxlength="100" placeholder="เช่น สมชาย ใจดี">
+<div class="house-map-actions">
+<button type="button" class="secondary" onclick="loadMyRequests()">ตรวจสอบสถานะ</button>
+</div>
+</section>
+<p id="myReqMsg" class="house-map-message"></p>
+<div id="myReqList"></div>
+</main>
+</div>
+
+<div id="approvePage" class="page-hidden">
+<main>
+<button type="button" class="page-button back-button" onclick="backToCenter()">← กลับ</button>
+<h2>🛡️ รออนุมัติการแก้ไข</h2>
+<p class="house-map-help">เข้าสู่ระบบเป็น <b id="approveWho">-</b></p>
+<div class="admin-bar">
+<button type="button" class="secondary" onclick="loadPendingList('pending')">🔄 โหลดคิวรออนุมัติ</button>
 <button type="button" class="secondary" onclick="loadPendingList('all')">ดูทั้งหมด (รวมอนุมัติ/ตีกลับแล้ว)</button>
 <button type="button" class="secondary" onclick="adminLogout()">ออกจากโหมดแอดมิน</button>
 </div>
@@ -1202,21 +1229,8 @@ button { min-height: 42px; touch-action: manipulation; }
 <p class="house-map-help" style="margin:8px 0 0">📋 คำขอเพิ่มแอดมิน (แอดมินคนอื่นขอได้ แต่ต้องให้เจ้าของระบบอนุมัติก่อนถึงมีผล)</p>
 <div id="adminReqList" style="margin-top:6px"></div>
 </details>
-<p class="house-map-help">รหัสจะจำไว้ในเครื่องนี้เท่านั้น (sessionStorage) ปิดแท็บแล้วต้องกรอกใหม่</p>
-</section>
 <p id="adminMsg" class="house-map-message"></p>
 <div id="pendingList"></div>
-<hr style="margin:22px 0;border:0;border-top:1px solid var(--line)">
-<h3>📤 สถานะคำขอของฉัน (ผู้ขอแก้ไขตรวจสอบเอง)</h3>
-<section class="search-panel" aria-label="สถานะคำขอ">
-<label>ชื่อผู้ขอ (ต้องตรงกับชื่อผู้บันทึกตอนส่งคำขอ)</label>
-<input id="myReqName" maxlength="100" placeholder="เช่น สมชาย ใจดี">
-<div class="house-map-actions">
-<button type="button" class="secondary" onclick="loadMyRequests()">ตรวจสอบสถานะ</button>
-</div>
-</section>
-<p id="myReqMsg" class="house-map-message"></p>
-<div id="myReqList"></div>
 </main>
 </div>
 
@@ -1225,7 +1239,7 @@ button { min-height: 42px; touch-action: manipulation; }
 กองสาธารณสุขและสิ่งแวดล้อม |
 งานสัตวแพทย์ |
 045-246060 ต่อ 180 280
-<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-20b (โหมดแก้ไขถอดแผนที่ออก)</span>
+<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23d (ล็อกอินแอดมินแล้วไปหน้ารออนุมัติ)</span>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -1449,6 +1463,8 @@ function openForm(center) {
     if (__vaxPageEl) { __vaxPageEl.classList.remove('page-visible'); __vaxPageEl.classList.add('page-hidden'); }
     var __adminPageEl = document.getElementById('adminPage');
     if (__adminPageEl) { __adminPageEl.classList.remove('page-visible'); __adminPageEl.classList.add('page-hidden'); }
+    var __approvePageEl = document.getElementById('approvePage');
+    if (__approvePageEl) { __approvePageEl.classList.remove('page-visible'); __approvePageEl.classList.add('page-hidden'); }
     centerPage.classList.remove('page-visible');
     centerPage.classList.add('page-hidden');
 
@@ -1485,6 +1501,8 @@ function backToCenter() {
     if (__vaxPageEl2) { __vaxPageEl2.classList.remove('page-visible'); __vaxPageEl2.classList.add('page-hidden'); }
     var __adminPageEl2 = document.getElementById('adminPage');
     if (__adminPageEl2) { __adminPageEl2.classList.remove('page-visible'); __adminPageEl2.classList.add('page-hidden'); }
+    var __approvePageEl2 = document.getElementById('approvePage');
+    if (__approvePageEl2) { __approvePageEl2.classList.remove('page-visible'); __approvePageEl2.classList.add('page-hidden'); }
     formPage.classList.remove('page-visible');
     formPage.classList.add('page-hidden');
 
@@ -3404,6 +3422,18 @@ document
                     'page-hidden'
                 );
 
+                var __approveAfterSubmit = document.getElementById(
+                    'approvePage'
+                );
+                if (__approveAfterSubmit) {
+                    __approveAfterSubmit.classList.remove(
+                        'page-visible'
+                    );
+                    __approveAfterSubmit.classList.add(
+                        'page-hidden'
+                    );
+                }
+
 
                 centerPage.classList.remove(
                     'page-hidden'
@@ -3594,7 +3624,7 @@ const RECORD_CACHE_KEY = 'animalSurveyCache_v1';
 /* ---------- เปลี่ยนหน้า ---------- */
 
 function showPage(name) {
-    ['centerPage', 'formPage', 'searchPage', 'statsPage', 'vaccinePage', 'adminPage'].forEach(function(id) {
+    ['centerPage', 'formPage', 'searchPage', 'statsPage', 'vaccinePage', 'adminPage', 'approvePage'].forEach(function(id) {
         const el = document.getElementById(id);
         if (!el) return;
         if (id === name) {
@@ -4573,18 +4603,40 @@ window.openAdmin = function(){
     try{ savedEm = sessionStorage.getItem('animalSurveyAdminEmail') || ''; }catch(e){}
     if(savedEm) document.getElementById('adminEmail').value = savedEm;
   }catch(e){}
-  showPage('adminPage');
-  window.scrollTo(0,0);
-  /* เคยล็อกอินในแท็บนี้แล้ว โหลดคิวรออนุมัติให้ดูทันที */
-  try{
-    if(adminEmail() && adminCode()) setTimeout(function(){ try{ loadPendingList('pending'); }catch(e){} try{ loadAdminRequests(); }catch(e){} }, 300);
-  }catch(e){}
+  /* เคยล็อกอินในแท็บนี้แล้ว → ไปหน้ารออนุมัติทันที ไม่ต้องกรอกใหม่ */
+  var hasSession = false;
+  try{ hasSession = !!(sessionStorage.getItem('animalSurveyAdminEmail') && sessionStorage.getItem('animalSurveyAdminCode')); }catch(e){}
+  if(hasSession){
+    var who = document.getElementById('approveWho');
+    if(who){ try{ who.textContent = sessionStorage.getItem('animalSurveyAdminEmail') || ''; }catch(e){} }
+    showPage('approvePage');
+    window.scrollTo(0,0);
+    setTimeout(function(){ try{ loadPendingList('pending'); }catch(e){} try{ loadAdminRequests(); }catch(e){} }, 300);
+  }else{
+    showPage('adminPage');
+    window.scrollTo(0,0);
+  }
 };
+function setAdminLoginMsg(t){
+  var el = document.getElementById('adminLoginMsg');
+  if(el) el.textContent = t || '';
+}
 window.adminLogin = async function(){
   var a = adminAuth();
-  if(!a) return;
-  await loadPendingList('pending');
+  if(!a){ try{ setAdminLoginMsg(document.getElementById('adminMsg').textContent); }catch(e){} return; }
+  setAdminLoginMsg('กำลังเข้าสู่ระบบ…');
+  var ok = await loadPendingList('pending');
   try{ await loadAdminRequests(); }catch(e){}
+  if(ok){
+    setAdminLoginMsg('');
+    var who = document.getElementById('approveWho');
+    if(who) who.textContent = a.email || '';
+    /* ล็อกอินสำเร็จ → ไปหน้ารออนุมัติการแก้ไขทันที */
+    showPage('approvePage');
+    window.scrollTo(0,0);
+  }else{
+    try{ setAdminLoginMsg(document.getElementById('adminMsg').textContent); }catch(e){}
+  }
 };
 window.adminLogout = function(){
   try{ sessionStorage.removeItem('animalSurveyAdminCode'); sessionStorage.removeItem('animalSurveyAdminEmail'); }catch(e){}
@@ -4592,6 +4644,9 @@ window.adminLogout = function(){
   document.getElementById('adminEmail').value = '';
   document.getElementById('pendingList').innerHTML = '';
   setAdminMsg('ออกจากโหมดแอดมินแล้ว');
+  setAdminLoginMsg('ออกจากโหมดแอดมินแล้ว');
+  showPage('adminPage');
+  window.scrollTo(0,0);
 };
 try{
   ['adminPasscode', 'adminEmail'].forEach(function(__aid){
@@ -4599,7 +4654,7 @@ try{
     if (__aInput && !__aInput.dataset.enterBound) {
       __aInput.dataset.enterBound = '1';
       __aInput.addEventListener('keydown', function(e){
-        if (e.key === 'Enter') { e.preventDefault(); loadPendingList(); }
+        if (e.key === 'Enter') { e.preventDefault(); window.adminLogin(); }
       });
     }
   });
@@ -4613,7 +4668,7 @@ function legacyGasHint(){ return 'โหลดไม่สำเร็จ'; }
 function friendlyLoadMsg(raw, fallback){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return (fallback || 'โหลดไม่สำเร็จ: ') + (raw || 'ไม่ทราบสาเหตุ'); }
 window.loadPendingList = async function(statusMode){
   var a = adminAuth();
-  if(!a) return;
+  if(!a) return false;
   setAdminMsg('กำลังโหลดคิว…');
   document.getElementById('pendingList').innerHTML = '';
   try{
@@ -4622,13 +4677,14 @@ window.loadPendingList = async function(statusMode){
     var d = (result && typeof result.message === 'object') ? result.message : null;
     if(!result || result.status !== 'success' || !d){
       setAdminMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return 'โหลดไม่สำเร็จ: ' + (raw || 'อีเมล/รหัสผิดหรือเซิร์ฟเวอร์ขัดข้อง'); })((result && result.message)));
-      return;
+      return false;
     }
     var items = d.items || [];
-    if(!items.length){ setAdminMsg(statusMode === 'all' ? 'ไม่มีคำขอเลย' : 'ไม่มีคิวรออนุมัติแล้ว ✅'); return; }
+    if(!items.length){ setAdminMsg(statusMode === 'all' ? 'ไม่มีคำขอเลย' : 'ไม่มีคิวรออนุมัติแล้ว ✅'); return true; }
     setAdminMsg('พบ '+items.length+' รายการ' + (statusMode === 'all' ? ' (ทั้งหมด)' : ' (รออนุมัติ)'));
     renderPending(items, a.pass);
-  }catch(e){ setAdminMsg('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
+    return true;
+  }catch(e){ setAdminMsg('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); return false; }
 };
 function renderPending(items, code){
   var box = document.getElementById('pendingList');
@@ -4820,7 +4876,7 @@ window.loadMyRequests = async function(){
 try{
   var _showPage = window.showPage;
   window.showPage = function(name){
-    ['centerPage','formPage','searchPage','statsPage','vaccinePage','adminPage'].forEach(function(id){
+    ['centerPage','formPage','searchPage','statsPage','vaccinePage','adminPage','approvePage'].forEach(function(id){
       var el = document.getElementById(id);
       if(!el) return;
       if(id === name){ el.classList.remove('page-hidden'); el.classList.add('page-visible'); }
