@@ -627,6 +627,7 @@ button { min-height: 42px; touch-action: manipulation; }
 #editReasonBox{margin-top:12px;padding:12px;background:#f3eefc;border:1px dashed #8e44ad;border-radius:10px}
 #editReason{width:100%;min-height:70px;font:inherit;padding:10px;border-radius:8px;border:1.5px solid var(--line);box-sizing:border-box}
 #adminPasscode,#deletePasscode{font-family:system-ui,-apple-system,Arial,sans-serif !important;letter-spacing:3px;}
+#adminEmail,#adminNewEmail{font-family:system-ui,-apple-system,Arial,sans-serif !important;}
 #mapToast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-12px);z-index:9999;max-width:min(92vw,480px);padding:12px 16px;border-radius:12px;background:#1d2b70;color:#fff;font-weight:700;font-size:15px;box-shadow:0 10px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;text-align:center}
 #mapToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .rabies-due-hint{font-size:13px;color:#7a5b00;background:#fff8e6;border:1px solid #ecd27a;border-radius:8px;padding:6px 9px;margin-top:6px}
@@ -957,7 +958,7 @@ button { min-height: 42px; touch-action: manipulation; }
   <div id="houseMapMessage" class="house-map-message" aria-live="polite">กำลังเตรียมแผนที่…</div>
   <div id="deleteConfirmBox" hidden style="margin-top:10px;padding:12px;background:#fff;border:1px dashed #a33;border-radius:10px">
     <div style="font-weight:700;color:#a33">ยืนยันลบ <span id="deleteConfirmAddr"></span></div>
-    <p class="house-map-help" style="margin:6px 0">หมุดรอสำรวจกดลบได้เลยไม่ต้องใส่รหัส ส่วนบ้านที่สำรวจแล้วต้องใส่รหัสก่อนลบ (ลบทั้งหมุดและข้อมูลในชีต)</p>
+    <p class="house-map-help" style="margin:6px 0">หมุดรอสำรวจกดลบได้เลยไม่ต้องใส่รหัส ส่วนบ้านที่สำรวจแล้วต้องกรอกอีเมล+รหัสแอดมิน (ลบทั้งหมุดและข้อมูลในชีต)</p>
     <label for="deletePasscode" style="margin-top:6px">รหัสยืนยันการลบ</label>
     <input id="deletePasscode" type="password" inputmode="text" placeholder="กรอกรหัสแล้วกดยืนยันลบ" autocomplete="current-password">
     <div class="house-map-actions">
@@ -1176,6 +1177,8 @@ button { min-height: 42px; touch-action: manipulation; }
 <h2>🛡️ อนุมัติการแก้ไขข้อมูลบ้าน</h2>
 <p class="house-map-help">โหมดนี้สำหรับแอดมินเท่านั้น การแก้ไขจากอสม./เจ้าของสัตว์จะเข้าคิวรออนุมัติก่อน ไม่เขียนทับข้อมูลจริงจนกว่าจะกดอนุมัติ</p>
 <section class="search-panel" aria-label="เข้าสู่ระบบแอดมิน">
+<label>อีเมลแอดมิน</label>
+<input id="adminEmail" type="email" inputmode="email" placeholder="เช่น name@gmail.com" autocomplete="username">
 <label>รหัสแอดมิน</label>
 <input id="adminPasscode" type="password" inputmode="text" placeholder="กรอกรหัสแอดมิน" autocomplete="current-password">
 <div class="admin-bar">
@@ -1183,6 +1186,19 @@ button { min-height: 42px; touch-action: manipulation; }
 <button type="button" class="secondary" onclick="loadPendingList('all')">ดูทั้งหมด (รวมอนุมัติ/ตีกลับแล้ว)</button>
 <button type="button" class="secondary" onclick="adminLogout()">ออกจากโหมดแอดมิน</button>
 </div>
+<details style="margin-top:10px">
+<summary style="cursor:pointer;font-weight:700;color:var(--brand-deep)">⚙️ จัดการบัญชีแอดมิน</summary>
+<div class="admin-bar" style="margin-top:8px">
+<input id="adminNewPass" type="password" placeholder="รหัสใหม่ของฉัน (อย่างน้อย 8 ตัว)" style="flex:1;min-width:200px">
+<button type="button" class="secondary" onclick="changeMyAdminPass()">เปลี่ยนรหัสของฉัน</button>
+</div>
+<div class="admin-bar">
+<input id="adminNewEmail" type="email" placeholder="อีเมลแอดมินใหม่" style="flex:1;min-width:170px">
+<input id="adminNewPass2" type="password" placeholder="รหัสแอดมินใหม่ (อย่างน้อย 8 ตัว)" style="flex:1;min-width:170px">
+<input id="adminNewName" placeholder="ชื่อที่แสดง" style="flex:1;min-width:130px">
+<button type="button" class="secondary" onclick="addNewAdmin()">เพิ่มแอดมิน</button>
+</div>
+</details>
 <p class="house-map-help">รหัสจะจำไว้ในเครื่องนี้เท่านั้น (sessionStorage) ปิดแท็บแล้วต้องกรอกใหม่</p>
 </section>
 <p id="adminMsg" class="house-map-message"></p>
@@ -1232,7 +1248,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbxU97elsDOB9zMbs0PchNoIlW3aK_Br4oFRJCSoXLXUFAy8zhv08xZZyl8SqWu276XX/exec";
+"https://script.google.com/macros/s/AKfycbyceyumQ_fa8mRSPdTtYOqLlV-_Dptaj9Cpweszzh-aEDixUUiKrRuGxJHWfNhabAIH/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -1435,6 +1451,9 @@ function openForm(center) {
 
     formPage.classList.remove('page-hidden');
     formPage.classList.add('page-visible');
+
+    /* มีร่างกรอกค้างไว้หรือไม่ (เฉพาะศูนย์เดียวกัน) */
+    try { if (typeof offerDraftRestore === 'function') offerDraftRestore(center); } catch (e) {}
 
     /* กลับไปบนสุด */
     window.scrollTo(0, 0);
@@ -1952,13 +1971,15 @@ window.confirmDeleteHouse = async function(){
         showMapToast('ลบหมุดบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว');
         return;
     }
-    if(!passcode){ setHouseMapMessage('กรุณากรอกรหัสยืนยันก่อนลบ (รหัสเดียวกับรหัสแอดมิน)'); document.getElementById('deletePasscode').focus(); return; }
+    if(!passcode){ setHouseMapMessage('กรุณากรอกรหัสยืนยันก่อนลบ (อีเมล+รหัสแอดมินเดียวกับหน้าแอดมิน)'); document.getElementById('deletePasscode').focus(); return; }
+    var adminEm = storedAdminEmail();
+    if(!adminEm){ setHouseMapMessage('กรุณากรอกอีเมลแอดมินที่หน้า 🛡️ อนุมัติแก้ไขก่อน แล้วค่อยกลับมาลบ'); return; }
     setHouseMapMessage('กำลังลบข้อมูลบ้านเลขที่ ' + p.addrNo + ' ในชีต...');
     try {
-        var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteHouse', passcode: passcode, centerName: p.centerName, community: p.community, addrNo: p.addrNo }) });
+        var res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteHouse', adminEmail: adminEm, passcode: passcode, centerName: p.centerName, community: p.community, addrNo: p.addrNo }) });
         var result = JSON.parse(await res.text());
         if (result.status !== 'success') { setHouseMapMessage('ลบในชีตไม่สำเร็จ: ' + (result.message || 'ไม่ทราบสาเหตุ') + ' (หมุดยังอยู่)'); return; }
-        try{ sessionStorage.setItem('animalSurveyAdminCode', passcode); }catch(e){}
+        try{ sessionStorage.setItem('animalSurveyAdminCode', passcode); sessionStorage.setItem('animalSurveyAdminEmail', adminEm); }catch(e){}
         removeLocalHouseMarker(p.kept, p.addrNo);
         document.getElementById('deleteConfirmBox').hidden = true; window.__pendingDelete = null;
         setHouseMapMessage('ลบข้อมูลบ้านเลขที่ ' + p.addrNo + ' สำเร็จแล้ว');
@@ -2707,6 +2728,16 @@ document
             return;
         }
 
+        if (surveyorIdEl.value && !isValidThaiId(surveyorIdEl.value)) {
+
+            alert(
+                'เลขบัตรประชาชนผู้สำรวจไม่ถูกต้อง (หลักตรวจสอบไม่ผ่าน) กรุณาตรวจสอบอีกครั้ง'
+            );
+
+            surveyorIdEl.focus();
+            return;
+        }
+
 
         /* ===============================
            บัตรประชาชน
@@ -2721,6 +2752,16 @@ document
 
             alert(
                 'กรุณากรอกหมายเลขบัตรประชาชน 13 หลัก'
+            );
+
+            citizen.focus();
+            return;
+        }
+
+        if (!isValidThaiId(citizen.value)) {
+
+            alert(
+                'หมายเลขบัตรประชาชนไม่ถูกต้อง (หลักตรวจสอบไม่ผ่าน) กรุณาตรวจสอบอีกครั้ง'
             );
 
             citizen.focus();
@@ -3332,6 +3373,8 @@ document
 
                 window.__formHasEditData = false;
 
+                try { if (typeof clearSurveyDraft === 'function') clearSurveyDraft(); } catch (e) {}
+
                 if (typeof exitEditMode === 'function') exitEditMode();
 
 
@@ -3521,6 +3564,20 @@ function compressImage(
             reader.readAsDataURL(file);
         }
     );
+}
+
+
+/* =====================================================
+   ตรวจเลขบัตรประชาชน 13 หลัก (checksum หลักสุดท้าย)
+===================================================== */
+
+function isValidThaiId(id) {
+    if (!/^\d{13}$/.test(id || '')) return false;
+    var sum = 0;
+    for (var i = 0; i < 12; i++) {
+        sum += Number(id.charAt(i)) * (13 - i);
+    }
+    return ((11 - (sum % 11)) % 10) === Number(id.charAt(12));
 }
 
 
@@ -4066,6 +4123,114 @@ function exitEditMode() {
     try { if (typeof refreshPetPhotoModes === 'function') refreshPetPhotoModes(); } catch (e) {}
 }
 
+
+/* =====================================================
+   แบบร่างอัตโนมัติ (กันข้อมูลหายเวลากรอกค้าง/เผลอออก)
+   - เซฟเฉพาะโหมดสำรวจใหม่ ไม่แตะโหมดแก้ไข
+   - ไม่เก็บรูปถ่าย (ต้องแนบใหม่) และไม่เก็บพิกัด (ต้องปักหมุดใหม่)
+===================================================== */
+
+var SURVEY_DRAFT_KEY = 'animalSurveyDraft_v1';
+var __draftTimer = null;
+
+function draftField(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+
+function collectSurveyDraft() {
+    try {
+        if (window.__surveyEdit) return null;
+        var pets = [];
+        Array.prototype.forEach.call(document.querySelectorAll('.pet-card'), function(card) {
+            var q = function(s) { var el = card.querySelector(s); return el ? el.value : ''; };
+            pets.push({name:q('.petName'), gender:q('.gender'), ageYear:q('.ageYear'), ageMonth:q('.ageMonth'), color:q('.color'), sterilization:q('.sterilization'), contraceptiveDate:q('.contraceptiveDate'), contraceptiveVet:q('.contraceptiveVet'), contraceptiveVetName:q('.contraceptiveVetName'), rabies:q('.rabies'), rabiesDate:q('.rabiesDate'), rabiesVet:q('.rabiesVet'), rabiesVetName:q('.rabiesVetName'), raisingStyle:q('.raising'), raisingLocation:q('.location')});
+        });
+        return {centerId:draftField('centerId'), community:draftField('communitySelect'), animalType:draftField('animalType'), otherAnimalType:draftField('otherAnimalType'), otherAnimalQty:draftField('otherAnimalQty'), petQty:draftField('petQty'), recorderName:draftField('recorderName'), recorderRole:draftField('recorderRole'), citizenId:draftField('citizenId'), ownerName:draftField('ownerName'), addrNo:draftField('addrNo'), road:draftField('road'), soi:draftField('soi'), phone:draftField('phone'), homePhone:draftField('homePhone'), raisingPlace:draftField('raisingPlace'), pets:pets, savedAt:Date.now()};
+    } catch (e) { return null; }
+}
+
+function draftHasContent(d) {
+    if (!d) return false;
+    return !!(d.recorderName || d.ownerName || d.addrNo || d.phone || d.citizenId || d.community || (d.pets && d.pets.length));
+}
+
+function saveSurveyDraftNow() {
+    try {
+        if (window.__surveyEdit) return;
+        var fp = document.getElementById('formPage');
+        if (!fp || !fp.classList.contains('page-visible')) return;
+        var d = collectSurveyDraft();
+        if (!draftHasContent(d)) return; /* ฟอร์มว่างไม่ทับร่างเดิม */
+        try { localStorage.setItem(SURVEY_DRAFT_KEY, JSON.stringify(d)); } catch (e) {}
+    } catch (e) {}
+}
+
+function scheduleSurveyDraftSave() {
+    try { if (__draftTimer) clearTimeout(__draftTimer); __draftTimer = setTimeout(saveSurveyDraftNow, 800); } catch (e) {}
+}
+
+function clearSurveyDraft() { try { localStorage.removeItem(SURVEY_DRAFT_KEY); } catch (e) {} }
+
+try {
+    if (!window.__draftListenerOn) {
+        window.__draftListenerOn = true;
+        document.addEventListener('input', function(e) { try { if (e.target && e.target.closest && e.target.closest('#surveyForm')) scheduleSurveyDraftSave(); } catch (_) {} });
+        document.addEventListener('change', function(e) { try { if (e.target && e.target.closest && e.target.closest('#surveyForm')) scheduleSurveyDraftSave(); } catch (_) {} });
+    }
+} catch (e) {}
+
+function offerDraftRestore(center) {
+    try {
+        if (window.__surveyEdit) return;
+        var raw = null; try { raw = localStorage.getItem(SURVEY_DRAFT_KEY); } catch (e) {}
+        if (!raw) return;
+        var d = null; try { d = JSON.parse(raw); } catch (e) {}
+        if (!draftHasContent(d)) return;
+        if (String(d.centerId) !== String(center)) return; /* ต่างศูนย์ไม่เสนอ */
+        var ok = false;
+        try { ok = confirm('มีร่างที่กรอกค้างไว้ (บ้านเลขที่ ' + (d.addrNo || '-') + ' ' + (d.community || '') + ')\nกด OK = ทำต่อจากร่างเดิม (รูปถ่ายกับหมุดแผนที่ต้องใส่ใหม่) / Cancel = เริ่มแบบฟอร์มเปล่า'); } catch (e) {}
+        if (!ok) { clearSurveyDraft(); return; }
+        setSelectValue(document.getElementById('communitySelect'), d.community);
+        setSelectValue(document.getElementById('animalType'), d.animalType);
+        document.getElementById('animalType').dispatchEvent(new Event('change'));
+        document.getElementById('otherAnimalType').value = d.otherAnimalType || '';
+        document.getElementById('otherAnimalQty').value = d.otherAnimalQty || '';
+        var nPets = Math.max(0, Math.min(100, parseInt(d.petQty || '0', 10) || 0));
+        if (d.animalType === 'ไม่มี') nPets = 0;
+        if (!nPets && d.pets && d.pets.length) nPets = Math.min(100, d.pets.length);
+        petQty.value = nPets;
+        petQty.dispatchEvent(new Event('input'));
+        var cards = document.querySelectorAll('.pet-card');
+        (d.pets || []).forEach(function(pet, i) {
+            var card = cards[i]; if (!card || !pet) return;
+            var setI = function(s, v) { var el = card.querySelector(s); if (el) el.value = v || ''; };
+            setI('.petName', pet.name);
+            var g = card.querySelector('.gender'); if (g) setSelectValue(g, pet.gender);
+            setI('.ageYear', pet.ageYear); setI('.ageMonth', pet.ageMonth); setI('.color', pet.color);
+            var st = card.querySelector('.sterilization'); if (st) { setSelectValue(st, pet.sterilization); st.dispatchEvent(new Event('change')); }
+            setI('.contraceptiveDate', pet.contraceptiveDate);
+            setVetSelect(card, '.contraceptiveVet', '.contraceptiveVetName', pet.contraceptiveVet);
+            var cv = card.querySelector('.contraceptiveVet');
+            if (cv && cv.value === 'อื่นๆ' && pet.contraceptiveVetName) { var cvn = card.querySelector('.contraceptiveVetName'); if (cvn) { cvn.value = pet.contraceptiveVetName; cvn.style.display = 'block'; } }
+            var rb = card.querySelector('.rabies'); if (rb) { setSelectValue(rb, pet.rabies); rb.dispatchEvent(new Event('change')); }
+            setI('.rabiesDate', pet.rabiesDate);
+            setVetSelect(card, '.rabiesVet', '.rabiesVetName', pet.rabiesVet);
+            var rv = card.querySelector('.rabiesVet');
+            if (rv && rv.value === 'อื่นๆ' && pet.rabiesVetName) { var rvn = card.querySelector('.rabiesVetName'); if (rvn) { rvn.value = pet.rabiesVetName; rvn.style.display = 'block'; } }
+            var rs = card.querySelector('.raising'); if (rs) setSelectValue(rs, pet.raisingStyle);
+            var lc = card.querySelector('.location'); if (lc) setSelectValue(lc, pet.raisingLocation);
+        });
+        document.getElementById('recorderName').value = d.recorderName || '';
+        setSelectValue(document.getElementById('recorderRole'), d.recorderRole);
+        document.getElementById('citizenId').value = d.citizenId || '';
+        document.getElementById('ownerName').value = d.ownerName || '';
+        document.getElementById('addrNo').value = d.addrNo || '';
+        document.getElementById('road').value = d.road || '';
+        document.getElementById('soi').value = d.soi || '';
+        document.getElementById('phone').value = d.phone || '';
+        document.getElementById('homePhone').value = d.homePhone || '';
+        setSelectValue(document.getElementById('raisingPlace'), d.raisingPlace);
+    } catch (e) {}
+}
+
 function setSelectValue(el, value) {
     if (!el) return;
     const vals = Array.prototype.map.call(el.options, function(o) { return o.value; });
@@ -4371,8 +4536,24 @@ function refreshVaxBadgeSilent(){
 }
 try{ setTimeout(updateVaxBadge, 500); }catch(e){}
 
-/* ---------- admin approval ---------- */
+/* ---------- admin approval (อีเมล+รหัสรายคน) ---------- */
 function adminCode(){ return (document.getElementById('adminPasscode').value || '').trim(); }
+function adminEmail(){ return (document.getElementById('adminEmail').value || '').trim().toLowerCase(); }
+function adminAuth(){
+  var em = adminEmail();
+  var cd = adminCode();
+  if(!em){ setAdminMsg('กรุณากรอกอีเมลแอดมินก่อน'); return null; }
+  if(!cd){ setAdminMsg('กรุณากรอกรหัสแอดมินก่อน'); return null; }
+  try{ sessionStorage.setItem('animalSurveyAdminCode', cd); sessionStorage.setItem('animalSurveyAdminEmail', em); }catch(e){}
+  return {email: em, pass: cd};
+}
+function storedAdminEmail(){
+  try{
+    var em = sessionStorage.getItem('animalSurveyAdminEmail') || '';
+    if(em) return em;
+  }catch(e){}
+  try{ return adminEmail(); }catch(_){ return ''; }
+}
 function adminHeaders(code){
   return { 'Content-Type': 'text/plain;charset=utf-8' };
 }
@@ -4381,24 +4562,30 @@ window.openAdmin = function(){
     var saved = '';
     try{ saved = sessionStorage.getItem('animalSurveyAdminCode') || ''; }catch(e){}
     if(saved) document.getElementById('adminPasscode').value = saved;
+    var savedEm = '';
+    try{ savedEm = sessionStorage.getItem('animalSurveyAdminEmail') || ''; }catch(e){}
+    if(savedEm) document.getElementById('adminEmail').value = savedEm;
   }catch(e){}
   showPage('adminPage');
   window.scrollTo(0,0);
 };
 window.adminLogout = function(){
-  try{ sessionStorage.removeItem('animalSurveyAdminCode'); }catch(e){}
+  try{ sessionStorage.removeItem('animalSurveyAdminCode'); sessionStorage.removeItem('animalSurveyAdminEmail'); }catch(e){}
   document.getElementById('adminPasscode').value = '';
+  document.getElementById('adminEmail').value = '';
   document.getElementById('pendingList').innerHTML = '';
   setAdminMsg('ออกจากโหมดแอดมินแล้ว');
 };
 try{
-  const __apInput = document.getElementById('adminPasscode');
-  if (__apInput && !__apInput.dataset.enterBound) {
-    __apInput.dataset.enterBound = '1';
-    __apInput.addEventListener('keydown', function(e){
-      if (e.key === 'Enter') { e.preventDefault(); loadPendingList(); }
-    });
-  }
+  ['adminPasscode', 'adminEmail'].forEach(function(__aid){
+    var __aInput = document.getElementById(__aid);
+    if (__aInput && !__aInput.dataset.enterBound) {
+      __aInput.dataset.enterBound = '1';
+      __aInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') { e.preventDefault(); loadPendingList(); }
+      });
+    }
+  });
 }catch(e){}
 function setAdminMsg(t){
   var el = document.getElementById('adminMsg');
@@ -4408,23 +4595,22 @@ function isLegacyGasMsg(m){ return typeof m === 'string' && m.indexOf('กรุ
 function legacyGasHint(){ return 'โหลดไม่สำเร็จ'; }
 function friendlyLoadMsg(raw, fallback){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return (fallback || 'โหลดไม่สำเร็จ: ') + (raw || 'ไม่ทราบสาเหตุ'); }
 window.loadPendingList = async function(statusMode){
-  var code = adminCode();
-  if(!code){ setAdminMsg('กรุณากรอกรหัสแอดมินก่อน'); return; }
-  try{ sessionStorage.setItem('animalSurveyAdminCode', code); }catch(e){}
+  var a = adminAuth();
+  if(!a) return;
   setAdminMsg('กำลังโหลดคิว…');
   document.getElementById('pendingList').innerHTML = '';
   try{
-    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listPending', passcode: code, status: statusMode === 'all' ? 'all' : 'pending'})});
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listPending', adminEmail: a.email, passcode: a.pass, status: statusMode === 'all' ? 'all' : 'pending'})});
     var result = JSON.parse(await res.text());
     var d = (result && typeof result.message === 'object') ? result.message : null;
     if(!result || result.status !== 'success' || !d){
-      setAdminMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return 'โหลดไม่สำเร็จ: ' + (raw || 'รหัสผิดหรือเซิร์ฟเวอร์ขัดข้อง'); })((result && result.message)));
+      setAdminMsg((function(raw){ if(isLegacyGasMsg(raw)) return 'โหลดไม่สำเร็จ'; return 'โหลดไม่สำเร็จ: ' + (raw || 'อีเมล/รหัสผิดหรือเซิร์ฟเวอร์ขัดข้อง'); })((result && result.message)));
       return;
     }
     var items = d.items || [];
     if(!items.length){ setAdminMsg(statusMode === 'all' ? 'ไม่มีคำขอเลย' : 'ไม่มีคิวรออนุมัติแล้ว ✅'); return; }
     setAdminMsg('พบ '+items.length+' รายการ' + (statusMode === 'all' ? ' (ทั้งหมด)' : ' (รออนุมัติ)'));
-    renderPending(items, code);
+    renderPending(items, a.pass);
   }catch(e){ setAdminMsg('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
 };
 function renderPending(items, code){
@@ -4461,8 +4647,9 @@ window.togglePendingDetail = async function(requestId){
   el.style.display = 'block';
   el.innerHTML = 'กำลังโหลดรายละเอียด…';
   try{
-    var code = adminCode();
-    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listPending', passcode: code, requestId: requestId})});
+    var a = adminAuth();
+    if(!a){ el.innerHTML = 'กรุณากรอกอีเมลและรหัสแอดมินก่อน'; return; }
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listPending', adminEmail: a.email, passcode: a.pass, requestId: requestId})});
     var result = JSON.parse(await res.text());
     var d = (result && typeof result.message === 'object') ? result.message : null;
     var it = d && d.items && d.items[0];
@@ -4496,15 +4683,15 @@ function diffRow(label, a, b){
   return '<tr class="'+(same?'diff-same':'diff-changed')+'"><td>'+v8esc(label)+'</td><td>'+v8esc(a||'-')+'</td><td>'+v8esc(b||'-')+'</td></tr>';
 }
 window.reviewPending = async function(requestId, decision){
-  var code = adminCode();
-  if(!code){ setAdminMsg('กรุณากรอกรหัสแอดมิน'); return; }
+  var a = adminAuth();
+  if(!a) return;
   var noteEl = document.getElementById('note-'+requestId);
   var note = noteEl ? noteEl.value : '';
   var okMsg = decision === 'approve' ? 'ยืนยันอนุมัติคำขอ '+requestId+' ? ข้อมูลจริงจะถูกเขียนทับทันที' : 'ยืนยันตีกลับคำขอ '+requestId+' ?';
   if(!confirm(okMsg)) return;
   setAdminMsg('กำลังดำเนินการ…');
   try{
-    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'reviewEdit', passcode: code, requestId: requestId, decision: decision, reviewBy: 'admin', reviewNote: note})});
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'reviewEdit', adminEmail: a.email, passcode: a.pass, requestId: requestId, decision: decision, reviewBy: a.email, reviewNote: note})});
     var result = JSON.parse(await res.text());
     var msg = (result && typeof result.message === 'object') ? JSON.stringify(result.message) : result.message;
     if(result && result.status === 'success'){
@@ -4514,6 +4701,47 @@ window.reviewPending = async function(requestId, decision){
       setTimeout(function(){ loadPendingList(); }, 1200);
     } else {
       setAdminMsg('❌ '+(msg||'ไม่สำเร็จ'));
+    }
+  }catch(e){ setAdminMsg('เชื่อมต่อไม่ได้'); }
+};
+window.changeMyAdminPass = async function(){
+  var a = adminAuth();
+  if(!a) return;
+  var np = (document.getElementById('adminNewPass').value || '').trim();
+  if(np.length < 8){ setAdminMsg('รหัสใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร'); return; }
+  setAdminMsg('กำลังเปลี่ยนรหัส…');
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'changeAdminPass', adminEmail: a.email, passcode: a.pass, newPasscode: np})});
+    var result = JSON.parse(await res.text());
+    if(result && result.status === 'success'){
+      document.getElementById('adminPasscode').value = np;
+      try{ sessionStorage.setItem('animalSurveyAdminCode', np); }catch(e){}
+      document.getElementById('adminNewPass').value = '';
+      setAdminMsg('✅ ' + ((result.message && result.message.message) || result.message || 'เปลี่ยนรหัสแล้ว'));
+    } else {
+      setAdminMsg('❌ ' + ((result && result.message) || 'เปลี่ยนรหัสไม่สำเร็จ'));
+    }
+  }catch(e){ setAdminMsg('เชื่อมต่อไม่ได้'); }
+};
+window.addNewAdmin = async function(){
+  var a = adminAuth();
+  if(!a) return;
+  var em = (document.getElementById('adminNewEmail').value || '').trim().toLowerCase();
+  var np = (document.getElementById('adminNewPass2').value || '').trim();
+  var nm = (document.getElementById('adminNewName').value || '').trim() || em;
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ setAdminMsg('อีเมลแอดมินใหม่ไม่ถูกต้อง'); return; }
+  if(np.length < 8){ setAdminMsg('รหัสของแอดมินใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร'); return; }
+  setAdminMsg('กำลังเพิ่มแอดมิน…');
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'addAdmin', adminEmail: a.email, passcode: a.pass, newAdminEmail: em, newAdminPass: np, newAdminName: nm})});
+    var result = JSON.parse(await res.text());
+    if(result && result.status === 'success'){
+      document.getElementById('adminNewEmail').value = '';
+      document.getElementById('adminNewPass2').value = '';
+      document.getElementById('adminNewName').value = '';
+      setAdminMsg('✅ ' + ((result.message && result.message.message) || result.message || ('เพิ่มแอดมิน ' + em + ' แล้ว')));
+    } else {
+      setAdminMsg('❌ ' + ((result && result.message) || 'เพิ่มแอดมินไม่สำเร็จ'));
     }
   }catch(e){ setAdminMsg('เชื่อมต่อไม่ได้'); }
 };
@@ -4576,5 +4804,3 @@ document.addEventListener('change', function(e){
 updateOutboxBadge();
 
 </script>
-
-
