@@ -732,10 +732,10 @@ button { min-height: 42px; touch-action: manipulation; }
 </div>
 
 <div class="center-actions">
-    <button type="button" class="page-button" onclick="openSearch()">
+    <button type="button" class="page-button" onclick="openSearch('search')">
         🔍 ค้นหา / แก้ไขข้อมูล
     </button>
-    <button type="button" class="page-button" onclick="openSearch()">
+    <button type="button" class="page-button" onclick="openSearch('outbox')">
         📥 กล่องขาออก (<span data-outbox-count>0</span>)
     </button>
     <button type="button" class="page-button" onclick="openStats()">
@@ -1102,9 +1102,9 @@ button { min-height: 42px; touch-action: manipulation; }
     ← กลับ
 </button>
 
-<h2>ค้นหา / แก้ไขข้อมูล</h2>
+<h2 id="searchPageTitle">ค้นหา / แก้ไขข้อมูล</h2>
 
-<section class="search-panel" aria-label="กล่องขาออก">
+<section class="search-panel" id="outboxSection" aria-label="กล่องขาออก">
 <h3>📥 กล่องขาออก (<span data-outbox-count>0</span> รายการ)</h3>
 <p class="house-map-help">บันทึกตอนไม่มีเน็ตจะถูกเก็บไว้ที่นี่ กลับมามีเน็ตแล้วกดส่ง หรือระบบจะส่งให้อัตโนมัติ</p>
 <div class="house-map-actions">
@@ -1114,8 +1114,8 @@ button { min-height: 42px; touch-action: manipulation; }
 <div id="outboxList"></div>
 </section>
 
-<section class="search-panel" aria-label="ค้นหาบ้าน">
-<h3>🔍 ค้นหาบ้านที่สำรวจแล้ว</h3>
+<section class="search-panel" id="houseSearchSection" aria-label="ค้นหาบ้าน">
+<h3>🔍 ค้นหาบ้านที่สำรวจแล้วเพื่อดำเนินการแก้ไข</h3>
 
 <label>ศูนย์บริการ</label>
 <select id="searchCenter"></select>
@@ -3547,12 +3547,21 @@ function showPage(name) {
     });
 }
 
-function openSearch() {
+function openSearch(mode) {
     initSearchCenters();
     updateOutboxBadge();
     renderOutboxList();
     outboxMsg('');
     setSearchMsg('');
+    /* แยกโหมด: 'search' โชว์เฉพาะค้นหา, 'outbox' โชว์เฉพาะกล่องขาออก, ไม่ระบุโชว์ทั้งคู่ */
+    try{
+        var showOutbox = (mode !== 'search');
+        var showSearch = (mode !== 'outbox');
+        var o = document.getElementById('outboxSection'); if(o) o.hidden = !showOutbox;
+        var s = document.getElementById('houseSearchSection'); if(s) s.hidden = !showSearch;
+        var t = document.getElementById('searchPageTitle');
+        if(t) t.textContent = (mode === 'outbox') ? '📥 กล่องขาออก' : 'ค้นหา / แก้ไขข้อมูล';
+    }catch(e){}
     showPage('searchPage');
     window.scrollTo(0, 0);
 }
