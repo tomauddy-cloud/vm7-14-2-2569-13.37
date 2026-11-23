@@ -863,32 +863,12 @@ button { min-height: 42px; touch-action: manipulation; }
 
 <div id="petList"></div>
 
-<h3>ข้อมูลผู้บันทึก</h3>
+<h3 style="margin-top:20px">
+ข้อมูลเจ้าของสัตว์
+</h3>
 
-<label>
-ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล(ชื่อ-นามสกุล)
-</label>
-
-<input type="text" id="recorderName" required>
-
-<label>ตำแหน่ง</label>
-
-<select id="recorderRole" required>
-
-<option value="">-- เลือกตำแหน่ง --</option>
-
-<option>เจ้าของสัตว์เลี้ยง</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 1</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 2</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 3</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 4</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 5</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 6</option>
-<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 7</option>
-
-</select>
-
-<input type="hidden" id="surveyorId">
+<label>ชื่อเจ้าของสัตว์ (ชื่อ-นามสกุล)</label>
+<input type="text" id="ownerName" required>
 
 <label>
 หมายเลขบัตรประชาชน เจ้าของสัตว์เลี้ยง (13 หลัก)
@@ -900,13 +880,6 @@ button { min-height: 42px; touch-action: manipulation; }
     maxlength="13"
     minlength="13"
     required>
-
-<h3 style="margin-top:20px">
-ข้อมูลเจ้าของสัตว์
-</h3>
-
-<label>ชื่อเจ้าของสัตว์ (ชื่อ-นามสกุล)</label>
-<input type="text" id="ownerName" required>
 
 <div class="owner-photo-wrap">
 
@@ -1054,6 +1027,33 @@ button { min-height: 42px; touch-action: manipulation; }
 </option>
 
 </select>
+
+<h3 style="margin-top:20px">ข้อมูลผู้บันทึก</h3>
+
+<label>
+ผู้บันทึกข้อมูล/ผู้สำรวจข้อมูล(ชื่อ-นามสกุล)
+</label>
+
+<input type="text" id="recorderName" required>
+
+<label>ตำแหน่ง</label>
+
+<select id="recorderRole" required>
+
+<option value="">-- เลือกตำแหน่ง --</option>
+
+<option>เจ้าของสัตว์เลี้ยง</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 1</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 2</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 3</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 4</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 5</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 6</option>
+<option>อสม.ศูนย์บริการสาธารณสุขศูนย์ที่ 7</option>
+
+</select>
+
+<input type="hidden" id="surveyorId">
 
 <button type="submit" class="save-button" id="saveButton">
 บันทึกข้อมูล
@@ -1239,7 +1239,7 @@ button { min-height: 42px; touch-action: manipulation; }
 กองสาธารณสุขและสิ่งแวดล้อม |
 งานสัตวแพทย์ |
 045-246060 ต่อ 180 280
-<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23d (ล็อกอินแอดมินแล้วไปหน้ารออนุมัติ)</span>
+<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23i (การ์ดคิวโชว์ชื่อสัตว์ใหม่+จับเปลี่ยนชื่อ)</span>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -1265,7 +1265,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbyjkvsT4DFZI3DSTaFU6p8Wjkoyng4bu6utZAOsyNnMitbYqONjYmJeg_SQg9cxKcv6/exec";
+"https://script.google.com/macros/s/AKfycbw_aAIg31Y3w3rbKYGoSqcZ8L6gLaDlx6wC_Wqep81iN_R4lc2k6km6S7Fc80psM_Wj/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -2673,7 +2673,22 @@ document
         }
 
         /* ===============================
-           ผู้สำรวจ
+           เจ้าของสัตว์ (อยู่บนฟอร์มก่อนผู้บันทึก)
+        =============================== */
+
+        const __ownerNameEl = document.getElementById('ownerName');
+        if (__ownerNameEl && !__ownerNameEl.value.trim()) {
+
+            alert(
+                'กรุณากรอก ชื่อเจ้าของสัตว์'
+            );
+
+            __ownerNameEl.focus();
+            return;
+        }
+
+        /* ===============================
+           ผู้สำรวจ (อยู่ท้ายฟอร์ม)
         =============================== */
 
         const recorder =
@@ -2688,17 +2703,6 @@ document
             );
 
             recorder.focus();
-            return;
-        }
-
-        const __ownerNameEl = document.getElementById('ownerName');
-        if (__ownerNameEl && !__ownerNameEl.value.trim()) {
-
-            alert(
-                'กรุณากรอก ชื่อเจ้าของสัตว์'
-            );
-
-            __ownerNameEl.focus();
             return;
         }
 
@@ -3098,9 +3102,9 @@ document
                         )?.value || '',
 
                     contraceptiveDate:
-                        card.querySelector(
+                        toCEDateStr(card.querySelector(
                             '.contraceptiveDate'
-                        )?.value || '',
+                        )?.value || ''),
 
                     contraceptiveVet:
                         getVet(
@@ -3114,9 +3118,9 @@ document
                         )?.value || '',
 
                     rabiesDate:
-                        card.querySelector(
+                        toCEDateStr(card.querySelector(
                             '.rabiesDate'
-                        )?.value || '',
+                        )?.value || ''),
 
                     rabiesVet:
                         getVet(
@@ -4239,12 +4243,12 @@ function offerDraftRestore(center) {
             var g = card.querySelector('.gender'); if (g) setSelectValue(g, pet.gender);
             setI('.ageYear', pet.ageYear); setI('.ageMonth', pet.ageMonth); setI('.color', pet.color);
             var st = card.querySelector('.sterilization'); if (st) { setSelectValue(st, pet.sterilization); st.dispatchEvent(new Event('change')); }
-            setI('.contraceptiveDate', pet.contraceptiveDate);
+            setI('.contraceptiveDate', toCEDateStr(pet.contraceptiveDate));
             setVetSelect(card, '.contraceptiveVet', '.contraceptiveVetName', pet.contraceptiveVet);
             var cv = card.querySelector('.contraceptiveVet');
             if (cv && cv.value === 'อื่นๆ' && pet.contraceptiveVetName) { var cvn = card.querySelector('.contraceptiveVetName'); if (cvn) { cvn.value = pet.contraceptiveVetName; cvn.style.display = 'block'; } }
             var rb = card.querySelector('.rabies'); if (rb) { setSelectValue(rb, pet.rabies); rb.dispatchEvent(new Event('change')); }
-            setI('.rabiesDate', pet.rabiesDate);
+            setI('.rabiesDate', toCEDateStr(pet.rabiesDate));
             setVetSelect(card, '.rabiesVet', '.rabiesVetName', pet.rabiesVet);
             var rv = card.querySelector('.rabiesVet');
             if (rv && rv.value === 'อื่นๆ' && pet.rabiesVetName) { var rvn = card.querySelector('.rabiesVetName'); if (rvn) { rvn.value = pet.rabiesVetName; rvn.style.display = 'block'; } }
@@ -4326,11 +4330,11 @@ function fillSurveyForm(rec) {
         if (q('.color')) q('.color').value = pet.color || '';
         setSelectValue(q('.sterilization'), pet.sterilization);
         if (q('.sterilization')) q('.sterilization').dispatchEvent(new Event('change'));
-        if (q('.contraceptiveDate')) q('.contraceptiveDate').value = pet.contraceptiveDate || '';
+        if (q('.contraceptiveDate')) q('.contraceptiveDate').value = toCEDateStr(pet.contraceptiveDate) || '';
         setVetSelect(card, '.contraceptiveVet', '.contraceptiveVetName', pet.contraceptiveVet);
         setSelectValue(q('.rabies'), pet.rabies);
         if (q('.rabies')) q('.rabies').dispatchEvent(new Event('change'));
-        if (q('.rabiesDate')) q('.rabiesDate').value = pet.rabiesDate || '';
+        if (q('.rabiesDate')) q('.rabiesDate').value = toCEDateStr(pet.rabiesDate) || '';
         setVetSelect(card, '.rabiesVet', '.rabiesVetName', pet.rabiesVet);
         setSelectValue(q('.raising'), pet.raisingStyle);
         setSelectValue(q('.location'), pet.raisingLocation);
@@ -4696,7 +4700,8 @@ function renderPending(items, code){
       '<div style="margin-top:4px">บ้านเลขที่ <b>'+v8esc(it.addrNo)+'</b> · '+v8esc(it.communityName)+' · '+v8esc(it.centerName)+'</div>' +
       '<div style="color:#5d6785;font-size:13.5px">ขอโดย: '+v8esc(it.requestedBy)+' ('+v8esc(it.recorderRole||'')+') · '+v8esc(it.requestTime||'')+'</div>' +
       '<div style="margin-top:6px"><b>เหตุผล:</b> '+v8esc(it.editReason||'-')+'</div>' +
-      '<div style="color:#5d6785;font-size:13px">เดิม: ' + v8esc(summPets(it.oldSummary)) + ' → ขอแก้เป็น: ' + (it.newPets==null?'':v8esc(String(it.newPets)+' ตัว')) + (it.newOwner?(' เจ้าของ: '+v8esc(it.newOwner)):'') + '</div>' +
+      '<div style="color:#5d6785;font-size:13px">เดิม: ' + v8esc(summPets(it.oldSummary)) + ' → ขอแก้เป็น: ' + v8esc(summNewPets(it)) + (it.newOwner?(' เจ้าของ: '+v8esc(it.newOwner)):'') + '</div>' +
+      (function(ch){ if(!ch || !ch.length) return ''; return '<div style="margin-top:4px;background:#fff8e6;border:1px solid #ecd27a;border-radius:8px;padding:6px 9px;font-size:13px;color:#5d6785">📝 <b>แก้ไข:</b><br>' + ch.map(function(c){ return '• ' + v8esc(c); }).join('<br>') + '</div>'; })(it.changes) +
       (it.reviewNote ? '<div style="font-size:13px">หมายเหตุแอดมิน: '+v8esc(it.reviewNote)+'</div>' : '') +
       '<div class="admin-bar">' +
         '<button type="button" class="mini-button" onclick="togglePendingDetail(\''+it.requestId+'\')">🔍 ดูเทียบก่อน/หลัง</button>' +
@@ -4712,6 +4717,16 @@ function summPets(o){
   var pets = o.pets || [];
   if(!pets.length) return (o.rows||0)+' แถว';
   return pets.slice(0,4).map(function(p){ return (p.pet||'(ไม่ระบุชื่อ)')+'/'+(p.type||''); }).join(', ') + (pets.length>4 ? ' (+'+(pets.length-4)+' ตัว)' : '');
+}
+function summNewPets(it){
+  var arr = (it && it.newPetList) || [];
+  var n = (it && it.newPets != null) ? it.newPets : arr.length;
+  if(arr.length){
+    var s = arr.slice(0,4).map(function(p){ return (p.name||'(ไม่ระบุชื่อ)')+'/'+(p.type||''); }).join(', ');
+    if(arr.length>4) s += ' (+'+(arr.length-4)+' ตัว)';
+    return s + ' ('+n+' ตัว)';
+  }
+  return (it && it.newPets != null) ? (it.newPets+' ตัว') : '';
 }
 window.togglePendingDetail = async function(requestId){
   var el = document.getElementById('detail-'+requestId);
@@ -4889,6 +4904,14 @@ var _backToCenter = window.backToCenter;
 })();
 
 /* hint ครบกำหนดวัคซีนในฟอร์ม */
+/* ช่อง date อาจได้ปี พ.ศ. (ผู้ใช้พิมพ์ปี พ.ศ. หรือเครื่องตั้งปฏิทินไทย) → แปลงเป็น ค.ศ. ก่อนคำนวณ/บันทึกเสมอ */
+function toCEDateStr(s){
+  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return s || '';
+  var y = Number(m[1]);
+  if(y > 2400) y -= 543;
+  return y + '-' + m[2] + '-' + m[3];
+}
 document.addEventListener('change', function(e){
   if(e.target && e.target.classList && e.target.classList.contains('rabiesDate')){
     try{
@@ -4896,7 +4919,14 @@ document.addEventListener('change', function(e){
       var old = card ? card.querySelector('.rabies-due-hint') : null;
       if(old) old.remove();
       if(!e.target.value) return;
-      var d = new Date(e.target.value + 'T00:00:00');
+      var iso = toCEDateStr(e.target.value);
+      /* เผื่อเบราว์เซอร์เก่าที่ช่อง date เป็นข้อความ ได้วันแบบ วัน/เดือน/ปี (พ.ศ. หรือ ค.ศ.) */
+      var thm = String(e.target.value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if(!/^(\d{4})-(\d{2})-(\d{2})/.test(iso) && thm){
+        var ty = Number(thm[3]); if(ty > 2400) ty -= 543;
+        iso = ty + '-' + ('0'+thm[2]).slice(-2) + '-' + ('0'+thm[1]).slice(-2);
+      }
+      var d = new Date(iso + 'T00:00:00');
       if(isNaN(d.getTime())) return;
       var due = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       due.setDate(due.getDate() + 365);
