@@ -1271,7 +1271,7 @@ button { min-height: 42px; touch-action: manipulation; }
 กองสาธารณสุขและสิ่งแวดล้อม |
 งานสัตวแพทย์ |
 045-246060 ต่อ 180 280
-<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23n (เปลี่ยน GAS_URL deployment ใหม่)</span>
+<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23p (สำรวจใหม่แผนที่สะอาดไม่โชว์หมุดเก่า)</span>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -1755,10 +1755,9 @@ function initHouseMap() {
             housePickMode = false;
             setHouseMapMessage('ปักหมุดตำแหน่งบ้านแล้ว กรุณากรอกบ้านเลขที่และบันทึกแบบสำรวจ');
         });
-        // สร้างครั้งแรก: วาดหมุดเดิมที่บันทึกไว้ในเครื่อง
+        // สร้างครั้งแรก: ไม่วาดหมุดเก่าอัตโนมัติ (สำรวจใหม่ต้องสะอาด อยากดูหมุดเดิมกดปุ่ม “แสดงบ้านทั้งหมด”)
         setTimeout(function() {
             try { houseMap.invalidateSize(); } catch (e) {}
-            showAllHouseMarkers();
         }, 180);
     }
     // หมายเหตุ: showAll อยู่ในบล็อกสร้างครั้งแรกเท่านั้น กันทับข้อความสำคัญ (เช่น คำแนะนำ GPS/โหมดแก้ไข)
@@ -2070,7 +2069,7 @@ function rememberHouseMarker(status) {
 }
 
 document.getElementById('communitySelect').addEventListener('change', function() {
-    if (houseMap) showAllHouseMarkers();
+    /* ไม่วาดหมุดเก่าอัตโนมัติตอนเปลี่ยนชุมชน (กันแผนที่รกตอนสำรวจใหม่) — อยากดูหมุดเดิมกดปุ่ม “แสดงบ้านทั้งหมด” */
 });
 document.getElementById('addrNo').addEventListener('change', function() {
     const addrNo = this.value.trim();
@@ -4216,6 +4215,11 @@ function resetSurveyFormForNew() {
     var __pc = document.getElementById('pinConfirmed'); if (__pc) __pc.checked = false;
     try { if (typeof selectedHouseMarker !== 'undefined' && selectedHouseMarker && typeof houseMap !== 'undefined' && houseMap) { try { houseMap.removeLayer(selectedHouseMarker); } catch (e) {} selectedHouseMarker = null; } } catch (e) {}
     try { selectedHouseKey = null; } catch (e) {}
+    /* สำรวจใหม่ = แผนที่ต้องสะอาด: ล้างหมุดเก่าทั้งชั้น (เขียว/เหลือง) + วง GPS + โหมดปัก (ข้อมูลในเครื่องยังอยู่ กด “แสดงบ้านทั้งหมด” ดูได้) */
+    try { if (typeof houseMarkersLayer !== 'undefined' && houseMarkersLayer) houseMarkersLayer.clearLayers(); } catch (e) {}
+    try { if (typeof gpsAccuracyCircle !== 'undefined' && gpsAccuracyCircle && typeof houseMap !== 'undefined' && houseMap) { try { houseMap.removeLayer(gpsAccuracyCircle); } catch (_) {} gpsAccuracyCircle = null; } } catch (e) {}
+    try { if (typeof housePickMode !== 'undefined') housePickMode = false; } catch (e) {}
+    try { setHouseMapMessage('แผนที่พร้อมปักหมุดบ้านหลังใหม่ — กด “ใช้ตำแหน่ง GPS ปัจจุบัน” หรือ “แตะเลือกจุดบนแผนที่”'); } catch (e) {}
     var __mc = document.getElementById('houseMapCoords'); if (__mc) __mc.textContent = 'ยังไม่ได้เลือกพิกัด';
     var __er = document.getElementById('editReason'); if (__er) __er.value = '';
     var __st = document.getElementById('status'); if (__st) __st.innerText = '';
@@ -4832,6 +4836,9 @@ window.togglePendingDetail = async function(requestId){
   }catch(e){ el.innerHTML = 'เชื่อมต่อไม่ได้'; }
 };
 function kv(o, k){ return (o && o[k] != null) ? String(o[k]) : ''; }
+function fmtPetCell(nm, tp, vx){
+  return 'ชื่อสัตว์: '+v8esc(nm||'-')+'<br>ประเภทสัตว์: '+v8esc(tp||'-')+'<br>วัคซีน: '+v8esc(vx||'-');
+}
 function buildDiffHtml(it){
   var np = it.newPayload || {};
   var nPets = np.pets || [];
@@ -4844,7 +4851,7 @@ function buildDiffHtml(it){
   rows += diffRow('จำนวนสัตว์', String(oFull.length), String(nPets.length));
   var petRows = nPets.map(function(p, i){
     var o = oFull[i] || {};
-    return '<tr><td>สัตว์ตัวที่ '+(i+1)+'</td><td>'+v8esc(kv(o,'ชื่อสัตว์')+' / '+kv(o,'ประเภทสัตว์')+' / วัคซีน:'+kv(o,'วันที่ฉีดวัคซีน'))+'</td><td>'+v8esc((p.name||'')+' / '+(p.animalType||np.animalType||'')+' / วัคซีน:'+(p.rabiesDate||''))+'</td></tr>';
+    return '<tr><td>สัตว์ตัวที่ '+(i+1)+'</td><td>'+fmtPetCell(kv(o,'ชื่อสัตว์'), kv(o,'ประเภทสัตว์'), kv(o,'วันที่ฉีดวัคซีน'))+'</td><td>'+fmtPetCell(p.name||'', (p.animalType||np.animalType||''), (p.rabiesDate||''))+'</td></tr>';
   }).join('');
   var photoNote = '';
   if(np.ownerPhotoPendingUrl) photoNote += '<div>📷 มีรูปเจ้าของใหม่: <a href="'+v8esc(np.ownerPhotoPendingUrl)+'" target="_blank" rel="noopener">เปิดดู</a></div>';
@@ -5085,3 +5092,5 @@ document.addEventListener('change', function(e){
 updateOutboxBadge();
 
 </script>
+
+
