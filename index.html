@@ -585,6 +585,14 @@ button { min-height: 42px; touch-action: manipulation; }
 #approvePage { display: none; }
 #approvePage.page-hidden { display: none !important; }
 #approvePage.page-visible { display: block !important; }
+#mapPage { display: none; }
+#mapPage.page-hidden { display: none !important; }
+#mapPage.page-visible { display: block !important; }
+#chartsPage { display: none; }
+#chartsPage.page-hidden { display: none !important; }
+#chartsPage.page-visible { display: block !important; }
+.survey-map-frame { width: 100%; height: min(72vh, 640px); min-height: 380px; border: 0; border-radius: 14px; background: #eef2f7; }
+@media (max-width: 600px) { .survey-map-frame { height: 70vh; min-height: 420px; } }
 .center-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; grid-column: 1 / -1; }
 .center-actions .page-button { border: 1.5px solid var(--line); background: #fff; color: var(--brand-deep); }
 .center-actions .page-button:hover { border-color: var(--brand); background: var(--field); }
@@ -750,6 +758,12 @@ button { min-height: 42px; touch-action: manipulation; }
     </button>
     <button type="button" class="page-button" onclick="openAdmin()">
         🛡️ อนุมัติแก้ไข
+    </button>
+    <button type="button" class="page-button" onclick="openSurveyMap()">
+        🗺️ แผนที่การสำรวจประชากรสัตว์ในเขตเทศบาลนครอุบลราชธานี
+    </button>
+    <button type="button" class="page-button" onclick="openSurveyCharts()">
+        📊 แสดงผลการสำรวจประชากรสัตว์ในเขตเทศบาลนครอุบลราชธานี
     </button>
 </div>
 
@@ -1234,12 +1248,30 @@ button { min-height: 42px; touch-action: manipulation; }
 </main>
 </div>
 
+<div id="mapPage" class="page-hidden">
+<main>
+<button type="button" class="page-button back-button" onclick="backToCenter()">← กลับ</button>
+<h2>🗺️ แผนที่การสำรวจประชากรสัตว์ในเขตเทศบาลนครอุบลราชธานี</h2>
+<p class="house-map-help">ช่องสำหรับแสดงแผนที่ (รอใส่ลิงก์แผนที่)</p>
+<div class="survey-map-frame" style="display:flex;align-items:center;justify-content:center;color:#8a93a8;border:1px dashed #b9c2d8">ว่างไว้ใส่แผนที่</div>
+</main>
+</div>
+
+<div id="chartsPage" class="page-hidden">
+<main>
+<button type="button" class="page-button back-button" onclick="backToCenter()">← กลับ</button>
+<h2>📊 แสดงผลการสำรวจประชากรสัตว์ในเขตเทศบาลนครอุบลราชธานี</h2>
+<p class="house-map-help">ช่องสำหรับแสดงกราฟ (รอใส่ข้อมูลกราฟ)</p>
+<div class="survey-map-frame" style="display:flex;align-items:center;justify-content:center;color:#8a93a8;border:1px dashed #b9c2d8">ว่างไว้ใส่กราฟ</div>
+</main>
+</div>
+
 <footer>
 © เทศบาลนครอุบลราชธานี |
 กองสาธารณสุขและสิ่งแวดล้อม |
 งานสัตวแพทย์ |
 045-246060 ต่อ 180 280
-<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23i (การ์ดคิวโชว์ชื่อสัตว์ใหม่+จับเปลี่ยนชื่อ)</span>
+<br><span id="appVersion" style="font-size:11px;color:#8a93a8">เวอร์ชันไฟล์: 2026-11-23n (เปลี่ยน GAS_URL deployment ใหม่)</span>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -1265,7 +1297,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbw_aAIg31Y3w3rbKYGoSqcZ8L6gLaDlx6wC_Wqep81iN_R4lc2k6km6S7Fc80psM_Wj/exec";
+"https://script.google.com/macros/s/AKfycbwkiNhkXYb4rF1azt09x0dWrM8hCYR2PwwR57iVPUJnW5ya_D4M7b_yQdCwZa8hEhjm/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -1465,12 +1497,15 @@ function openForm(center) {
     if (__adminPageEl) { __adminPageEl.classList.remove('page-visible'); __adminPageEl.classList.add('page-hidden'); }
     var __approvePageEl = document.getElementById('approvePage');
     if (__approvePageEl) { __approvePageEl.classList.remove('page-visible'); __approvePageEl.classList.add('page-hidden'); }
+    var __mapPageEl = document.getElementById('mapPage');
+    if (__mapPageEl) { __mapPageEl.classList.remove('page-visible'); __mapPageEl.classList.add('page-hidden'); }
+    var __chartsPageEl = document.getElementById('chartsPage');
+    if (__chartsPageEl) { __chartsPageEl.classList.remove('page-visible'); __chartsPageEl.classList.add('page-hidden'); }
     centerPage.classList.remove('page-visible');
     centerPage.classList.add('page-hidden');
 
     formPage.classList.remove('page-hidden');
     formPage.classList.add('page-visible');
-
     /* มีร่างกรอกค้างไว้หรือไม่ (เฉพาะศูนย์เดียวกัน) */
     try { if (typeof offerDraftRestore === 'function') offerDraftRestore(center); } catch (e) {}
 
@@ -1503,6 +1538,10 @@ function backToCenter() {
     if (__adminPageEl2) { __adminPageEl2.classList.remove('page-visible'); __adminPageEl2.classList.add('page-hidden'); }
     var __approvePageEl2 = document.getElementById('approvePage');
     if (__approvePageEl2) { __approvePageEl2.classList.remove('page-visible'); __approvePageEl2.classList.add('page-hidden'); }
+    var __mapPageEl2 = document.getElementById('mapPage');
+    if (__mapPageEl2) { __mapPageEl2.classList.remove('page-visible'); __mapPageEl2.classList.add('page-hidden'); }
+    var __chartsPageEl2 = document.getElementById('chartsPage');
+    if (__chartsPageEl2) { __chartsPageEl2.classList.remove('page-visible'); __chartsPageEl2.classList.add('page-hidden'); }
     formPage.classList.remove('page-visible');
     formPage.classList.add('page-hidden');
 
@@ -3323,7 +3362,11 @@ document
             payload.action = 'submitEditRequest';
             payload.existingPhotos = window.__surveyEdit.existingPhotos || null;
             payload.requestedBy = (document.getElementById('recorderName').value || '').trim();
-            payload.editReason = (document.getElementById('editReason').value || '').trim();
+            /* เหตุผลอัตโนมัติ: สรุปสิ่งที่เปลี่ยนเทียบกับข้อมูลเดิม แล้วต่อท้ายด้วยที่ผู้ขอพิมพ์ (ถ้ามี) */
+            var __userReason = (document.getElementById('editReason').value || '').trim();
+            var __autoReason = '';
+            try { __autoReason = buildEditAutoReason(window.__surveyEdit.orig, payload); } catch (e) {}
+            payload.editReason = __autoReason ? (__userReason ? (__autoReason + ' (' + __userReason + ')') : __autoReason) : __userReason;
             if (!payload.editReason) { alert('กรุณากรอกเหตุผลการแก้ไขก่อนส่ง (แอดมินใช้ประกอบการอนุมัติ)'); document.getElementById('editReason').focus(); return; }
         }
 
@@ -3434,6 +3477,28 @@ document
                         'page-visible'
                     );
                     __approveAfterSubmit.classList.add(
+                        'page-hidden'
+                    );
+                }
+                var __mapAfterSubmit = document.getElementById(
+                    'mapPage'
+                );
+                if (__mapAfterSubmit) {
+                    __mapAfterSubmit.classList.remove(
+                        'page-visible'
+                    );
+                    __mapAfterSubmit.classList.add(
+                        'page-hidden'
+                    );
+                }
+                var __chartsAfterSubmit = document.getElementById(
+                    'chartsPage'
+                );
+                if (__chartsAfterSubmit) {
+                    __chartsAfterSubmit.classList.remove(
+                        'page-visible'
+                    );
+                    __chartsAfterSubmit.classList.add(
                         'page-hidden'
                     );
                 }
@@ -3628,7 +3693,7 @@ const RECORD_CACHE_KEY = 'animalSurveyCache_v1';
 /* ---------- เปลี่ยนหน้า ---------- */
 
 function showPage(name) {
-    ['centerPage', 'formPage', 'searchPage', 'statsPage', 'vaccinePage', 'adminPage', 'approvePage'].forEach(function(id) {
+    ['centerPage', 'formPage', 'searchPage', 'statsPage', 'vaccinePage', 'adminPage', 'approvePage', 'mapPage', 'chartsPage'].forEach(function(id) {
         const el = document.getElementById(id);
         if (!el) return;
         if (id === name) {
@@ -3967,6 +4032,18 @@ function openStats() {
     window.scrollTo(0, 0);
 }
 
+function openSurveyMap() {
+    try { if (typeof exitEditMode === 'function') exitEditMode(); } catch (e) {}
+    showPage('mapPage');
+    window.scrollTo(0, 0);
+}
+
+function openSurveyCharts() {
+    try { if (typeof exitEditMode === 'function') exitEditMode(); } catch (e) {}
+    showPage('chartsPage');
+    window.scrollTo(0, 0);
+}
+
 /* ---------- ผลงานรายบุคคล (ตามเลขบัตรผู้สำรวจ) ---------- */
 
 function normStatName(s) {
@@ -4089,6 +4166,15 @@ function isHouseMapPanelGone() {
 
 function enterEditMode(rec, key) {
     window.__surveyEdit = {key: key, existingPhotos: rec.existingPhotos || null};
+    /* เก็บข้อมูลเดิมไว้เทียบตอนกดส่ง เพื่อสรุปเหตุผลอัตโนมัติ */
+    try {
+        window.__surveyEdit.orig = {
+            ownerName: rec.ownerName || '',
+            phone: rec.phone || '',
+            animalType: rec.animalType || '',
+            pets: (rec.pets || []).map(function(p){ return {name: p.name || '', animalType: p.animalType || '', rabies: p.rabies || '', rabiesDate: (typeof toCEDateStr === 'function' ? toCEDateStr(p.rabiesDate) : (p.rabiesDate || ''))}; })
+        };
+    } catch (e) { window.__surveyEdit.orig = null; }
     window.__formHasEditData = true; // จำไว้ว่าฟอร์มนี้โหลดข้อมูลเก่า: เปิดสำรวจใหม่ครั้งหน้าต้องล้างก่อน
     fillSurveyForm(rec);
     document.getElementById('editBanner').hidden = false;
@@ -4891,7 +4977,7 @@ window.loadMyRequests = async function(){
 try{
   var _showPage = window.showPage;
   window.showPage = function(name){
-    ['centerPage','formPage','searchPage','statsPage','vaccinePage','adminPage','approvePage'].forEach(function(id){
+    ['centerPage','formPage','searchPage','statsPage','vaccinePage','adminPage','approvePage','mapPage','chartsPage'].forEach(function(id){
       var el = document.getElementById(id);
       if(!el) return;
       if(id === name){ el.classList.remove('page-hidden'); el.classList.add('page-visible'); }
@@ -4911,6 +4997,63 @@ function toCEDateStr(s){
   var y = Number(m[1]);
   if(y > 2400) y -= 543;
   return y + '-' + m[2] + '-' + m[3];
+}
+/* สรุปสิ่งที่เปลี่ยนเทียบข้อมูลเดิมตอนเข้าโหมดแก้ไข → ใส่เป็นเหตุผลอัตโนมัติ */
+function buildEditAutoReason(orig, payload){
+  var out = [];
+  try{
+    orig = orig || {}; payload = payload || {};
+    var norm = function(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); };
+    var nrab = function(s){ s = norm(s); return s || 'ไม่เคยฉีดวัคซีนพิษสุนัขบ้า'; };
+    var fmtD = function(s){
+      var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if(!m) return norm(s) || '-';
+      return m[3] + '/' + m[2] + '/' + (Number(m[1]) + 543);
+    };
+    var oldPets = orig.pets || [], newPets = payload.pets || [];
+    /* การ์ดสัตว์ไม่มีช่องประเภทรายตัว ใช้ประเภทรวมของบ้านแทน */
+    var defT = norm(payload.animalType) || norm(orig.animalType);
+    var ptype = function(x){ return norm(x.animalType) || defT; };
+    if(norm(payload.ownerName) && norm(orig.ownerName) !== norm(payload.ownerName)) out.push('เจ้าของสัตว์: ' + (norm(orig.ownerName) || '-') + ' → ' + norm(payload.ownerName));
+    if(norm(payload.phone) && norm(orig.phone) !== norm(payload.phone)) out.push('เบอร์มือถือ: ' + (norm(orig.phone) || '-') + ' → ' + norm(payload.phone));
+    var used = {}, addedList = [];
+    newPets.forEach(function(np){
+      var nm = norm(np.name) || '(ไม่ระบุชื่อ)';
+      var found = -1;
+      for(var i = 0; i < oldPets.length; i++){
+        if(used[i]) continue;
+        if(nm !== '(ไม่ระบุชื่อ)' && norm(oldPets[i].name) === nm){ found = i; break; }
+      }
+      if(found < 0){ addedList.push(np); return; }
+      used[found] = true;
+      var op = oldPets[found];
+      if(ptype(op) !== ptype(np)) out.push('สัตว์ "' + nm + '" ประเภท: ' + (ptype(op) || '-') + ' → ' + (ptype(np) || '-'));
+      if(nrab(op.rabies) !== nrab(np.rabies)) out.push('สัตว์ "' + nm + '" วัคซีน: ' + nrab(op.rabies) + ' → ' + nrab(np.rabies));
+      var odt = toCEDateStr(op.rabiesDate), ndt = toCEDateStr(np.rabiesDate);
+      if(odt !== ndt) out.push('สัตว์ "' + nm + '" วันฉีดวัคซีน: ' + fmtD(odt) + ' → ' + fmtD(ndt));
+    });
+    var removedList = [];
+    oldPets.forEach(function(op, i){ if(!used[i]) removedList.push(op); });
+    var pairedA = {};
+    removedList.forEach(function(op){
+      for(var k = 0; k < addedList.length; k++){
+        if(pairedA[k]) continue;
+        if(ptype(addedList[k]) === ptype(op)){
+          pairedA[k] = true; op.__paired = true;
+          out.push('เปลี่ยนชื่อสัตว์: ' + (norm(op.name) || '(ไม่ระบุชื่อ)') + ' → ' + (norm(addedList[k].name) || '(ไม่ระบุชื่อ)') + (ptype(op) ? ' (' + ptype(op) + ')' : ''));
+          break;
+        }
+      }
+    });
+    addedList.forEach(function(np, k){
+      if(!pairedA[k]) out.push('เพิ่มสัตว์: ' + (norm(np.name) || '(ไม่ระบุชื่อ)') + (ptype(np) ? ' (' + ptype(np) + ')' : ''));
+    });
+    removedList.forEach(function(op){
+      if(!op.__paired) out.push('ลบสัตว์: ' + (norm(op.name) || '(ไม่ระบุชื่อ)') + (ptype(op) ? ' (' + ptype(op) + ')' : ''));
+    });
+    if(oldPets.length !== newPets.length) out.unshift('จำนวนสัตว์: ' + oldPets.length + ' → ' + newPets.length + ' ตัว');
+  }catch(e){}
+  return out.slice(0, 12).join('; ');
 }
 document.addEventListener('change', function(e){
   if(e.target && e.target.classList && e.target.classList.contains('rabiesDate')){
@@ -4942,5 +5085,3 @@ document.addEventListener('change', function(e){
 updateOutboxBadge();
 
 </script>
-
-
