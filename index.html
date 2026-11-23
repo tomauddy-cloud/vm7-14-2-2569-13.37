@@ -919,9 +919,6 @@ button { min-height: 42px; touch-action: manipulation; }
 .photo-mode-box input[type=radio]{width:14px;height:14px;margin:0;accent-color:#8e44ad;flex-shrink:0}
 .photo-mode-box[hidden]{display:none !important}
 </style>
-</head>
-<body>
-
 <div id="ownerPhotoChoiceBox" class="photo-mode-box" hidden>
   <div class="pm-title">📷 รูปเจ้าของ</div>
   <label class="pm-opt"><input type="radio" name="ownerPhotoMode" value="old" checked> ใช้รูปเดิม</label>
@@ -1398,6 +1395,12 @@ function openForm(center) {
     const centerName = document.getElementById('centerName');
     const centerLabel = document.getElementById('centerLabel');
 
+    /* สำคัญ: เปลี่ยนหน้า */
+    if (typeof exitEditMode === 'function') exitEditMode();
+    /* เปิดสำรวจหลังใหม่ = ล้างฟอร์มให้ว่างหมดทุกครั้ง (ทั้งหลังแก้ไขและงานใหม่ที่กรอกค้างไว้) */
+    try { if (typeof resetSurveyFormForNew === 'function') resetSurveyFormForNew(); } catch (e) {}
+    window.__formHasEditData = false;
+
     centerId.value = center;
     centerName.value = centerNames[center];
 
@@ -1415,8 +1418,6 @@ function openForm(center) {
     /* เตรียมแผนที่หลังเปิดหน้าแบบสำรวจ */
     setTimeout(initHouseMap, 120);
 
-    /* สำคัญ: เปลี่ยนหน้า */
-    if (typeof exitEditMode === 'function') exitEditMode();
     var __searchPageEl = document.getElementById('searchPage');
     if (__searchPageEl) { __searchPageEl.classList.remove('page-visible'); __searchPageEl.classList.add('page-hidden'); }
     var __statsPageEl = document.getElementById('statsPage');
@@ -3325,6 +3326,8 @@ document
                 ownerPreview.style.display =
                     'none';
 
+                window.__formHasEditData = false;
+
                 if (typeof exitEditMode === 'function') exitEditMode();
 
 
@@ -3979,6 +3982,7 @@ function isHouseMapPanelGone() {
 
 function enterEditMode(rec, key) {
     window.__surveyEdit = {key: key, existingPhotos: rec.existingPhotos || null};
+    window.__formHasEditData = true; // จำไว้ว่าฟอร์มนี้โหลดข้อมูลเก่า: เปิดสำรวจใหม่ครั้งหน้าต้องล้างก่อน
     fillSurveyForm(rec);
     document.getElementById('editBanner').hidden = false;
     document.getElementById('editBannerText').textContent =
@@ -4004,6 +4008,32 @@ function enterEditMode(rec, key) {
     } catch (e) {}
     showPage('formPage');
     window.scrollTo(0, 0);
+}
+
+/* ล้างฟอร์มเป็นเปล่าสำหรับสำรวจหลังใหม่ (openForm เรียกทุกครั้ง) */
+function resetSurveyFormForNew() {
+    var f = document.getElementById('surveyForm');
+    if (f) f.reset();
+    var pl = document.getElementById('petList');
+    if (pl) pl.innerHTML = '';
+    try { if (typeof setPreview === 'function') setPreview(document.getElementById('ownerPhotoPreview'), ''); } catch (e) {}
+    var __hl1 = document.getElementById('houseLat'); if (__hl1) __hl1.value = '';
+    var __hl2 = document.getElementById('houseLng'); if (__hl2) __hl2.value = '';
+    try { lastGpsAccuracy = null; } catch (e) {}
+    var __pc = document.getElementById('pinConfirmed'); if (__pc) __pc.checked = false;
+    try { if (typeof selectedHouseMarker !== 'undefined' && selectedHouseMarker && typeof houseMap !== 'undefined' && houseMap) { try { houseMap.removeLayer(selectedHouseMarker); } catch (e) {} selectedHouseMarker = null; } } catch (e) {}
+    try { selectedHouseKey = null; } catch (e) {}
+    var __mc = document.getElementById('houseMapCoords'); if (__mc) __mc.textContent = 'ยังไม่ได้เลือกพิกัด';
+    var __er = document.getElementById('editReason'); if (__er) __er.value = '';
+    var __st = document.getElementById('status'); if (__st) __st.innerText = '';
+    try {
+        var __sid = localStorage.getItem('animalSurveyorId') || '';
+        if (__sid) document.getElementById('surveyorId').value = __sid;
+    } catch (e) {}
+    try {
+        var __at = document.getElementById('animalType');
+        if (__at) __at.dispatchEvent(new Event('change'));
+    } catch (e) {}
 }
 
 function exitEditMode() {
@@ -4507,6 +4537,3 @@ updateOutboxBadge();
 </script>
 
 
-
-</body>
-</html>
