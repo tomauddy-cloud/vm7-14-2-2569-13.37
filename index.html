@@ -1182,7 +1182,8 @@ button { min-height: 42px; touch-action: manipulation; }
 <label>รหัสแอดมิน</label>
 <input id="adminPasscode" type="password" inputmode="text" placeholder="กรอกรหัสแอดมิน" autocomplete="current-password">
 <div class="admin-bar">
-<button type="button" onclick="loadPendingList()">📋 โหลดคิวรออนุมัติ</button>
+<button type="button" onclick="adminLogin()">🔑 เข้าสู่ระบบ</button>
+<button type="button" class="secondary" onclick="loadPendingList()">🔄 โหลดคิวรออนุมัติ</button>
 <button type="button" class="secondary" onclick="loadPendingList('all')">ดูทั้งหมด (รวมอนุมัติ/ตีกลับแล้ว)</button>
 <button type="button" class="secondary" onclick="adminLogout()">ออกจากโหมดแอดมิน</button>
 </div>
@@ -1196,8 +1197,10 @@ button { min-height: 42px; touch-action: manipulation; }
 <input id="adminNewEmail" type="email" placeholder="อีเมลแอดมินใหม่" style="flex:1;min-width:170px">
 <input id="adminNewPass2" type="password" placeholder="รหัสแอดมินใหม่ (อย่างน้อย 8 ตัว)" style="flex:1;min-width:170px">
 <input id="adminNewName" placeholder="ชื่อที่แสดง" style="flex:1;min-width:130px">
-<button type="button" class="secondary" onclick="addNewAdmin()">เพิ่มแอดมิน</button>
+<button type="button" class="secondary" onclick="addNewAdmin()">ขอเพิ่มแอดมิน</button>
 </div>
+<p class="house-map-help" style="margin:8px 0 0">📋 คำขอเพิ่มแอดมิน (แอดมินคนอื่นขอได้ แต่ต้องให้เจ้าของระบบอนุมัติก่อนถึงมีผล)</p>
+<div id="adminReqList" style="margin-top:6px"></div>
 </details>
 <p class="house-map-help">รหัสจะจำไว้ในเครื่องนี้เท่านั้น (sessionStorage) ปิดแท็บแล้วต้องกรอกใหม่</p>
 </section>
@@ -1248,7 +1251,7 @@ document.getElementById('homePhone').setAttribute('pattern', '[0-9-]+');
 ===================================================== */
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbyceyumQ_fa8mRSPdTtYOqLlV-_Dptaj9Cpweszzh-aEDixUUiKrRuGxJHWfNhabAIH/exec";
+"https://script.google.com/macros/s/AKfycbyjkvsT4DFZI3DSTaFU6p8Wjkoyng4bu6utZAOsyNnMitbYqONjYmJeg_SQg9cxKcv6/exec";
 
 /* =====================================================
    รายชื่อชุมชน
@@ -4540,11 +4543,15 @@ try{ setTimeout(updateVaxBadge, 500); }catch(e){}
 function adminCode(){ return (document.getElementById('adminPasscode').value || '').trim(); }
 function adminEmail(){ return (document.getElementById('adminEmail').value || '').trim().toLowerCase(); }
 function adminAuth(){
+  var a = adminCreds();
+  if(!a){ setAdminMsg(!adminEmail() ? 'กรุณากรอกอีเมลแอดมินก่อน' : 'กรุณากรอกรหัสแอดมินก่อน'); return null; }
+  try{ sessionStorage.setItem('animalSurveyAdminCode', a.pass); sessionStorage.setItem('animalSurveyAdminEmail', a.email); }catch(e){}
+  return a;
+}
+function adminCreds(){
   var em = adminEmail();
   var cd = adminCode();
-  if(!em){ setAdminMsg('กรุณากรอกอีเมลแอดมินก่อน'); return null; }
-  if(!cd){ setAdminMsg('กรุณากรอกรหัสแอดมินก่อน'); return null; }
-  try{ sessionStorage.setItem('animalSurveyAdminCode', cd); sessionStorage.setItem('animalSurveyAdminEmail', em); }catch(e){}
+  if(!em || !cd) return null;
   return {email: em, pass: cd};
 }
 function storedAdminEmail(){
@@ -4568,6 +4575,16 @@ window.openAdmin = function(){
   }catch(e){}
   showPage('adminPage');
   window.scrollTo(0,0);
+  /* เคยล็อกอินในแท็บนี้แล้ว โหลดคิวรออนุมัติให้ดูทันที */
+  try{
+    if(adminEmail() && adminCode()) setTimeout(function(){ try{ loadPendingList('pending'); }catch(e){} try{ loadAdminRequests(); }catch(e){} }, 300);
+  }catch(e){}
+};
+window.adminLogin = async function(){
+  var a = adminAuth();
+  if(!a) return;
+  await loadPendingList('pending');
+  try{ await loadAdminRequests(); }catch(e){}
 };
 window.adminLogout = function(){
   try{ sessionStorage.removeItem('animalSurveyAdminCode'); sessionStorage.removeItem('animalSurveyAdminEmail'); }catch(e){}
@@ -4740,9 +4757,44 @@ window.addNewAdmin = async function(){
       document.getElementById('adminNewPass2').value = '';
       document.getElementById('adminNewName').value = '';
       setAdminMsg('✅ ' + ((result.message && result.message.message) || result.message || ('เพิ่มแอดมิน ' + em + ' แล้ว')));
+      try{ loadAdminRequests(); }catch(e){}
     } else {
       setAdminMsg('❌ ' + ((result && result.message) || 'เพิ่มแอดมินไม่สำเร็จ'));
     }
+  }catch(e){ setAdminMsg('เชื่อมต่อไม่ได้'); }
+};
+window.loadAdminRequests = async function(){
+  var box = document.getElementById('adminReqList');
+  if(!box) return;
+  var a = adminCreds();
+  if(!a){ box.innerHTML = '<p class="house-map-help">กรุณาเข้าสู่ระบบแอดมินก่อน</p>'; return; }
+  box.innerHTML = '<p class="house-map-help">กำลังโหลดคำขอเพิ่มแอดมิน…</p>';
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'listAdminRequests', adminEmail: a.email, passcode: a.pass})});
+    var result = JSON.parse(await res.text());
+    var d = (result && typeof result.message === 'object') ? result.message : null;
+    if(!result || result.status !== 'success' || !d){ box.innerHTML = '<p class="house-map-help">โหลดคำขอไม่สำเร็จ: ' + v8esc(typeof result.message === 'string' ? result.message : 'ไม่ทราบสาเหตุ') + '</p>'; return; }
+    var items = d.items || [];
+    if(!items.length){ box.innerHTML = '<p class="house-map-help">ยังไม่มีคำขอเพิ่มแอดมิน</p>'; return; }
+    box.innerHTML = items.map(function(it){
+      var st = it.status === 'pending' ? '⏳ รออนุมัติ' : (it.status === 'approved' ? '✅ อนุมัติแล้ว' : '❌ ตีกลับแล้ว');
+      var btns = (d.isOwner && it.status === 'pending')
+        ? '<div class="admin-bar"><button type="button" class="mini-button primary" onclick="reviewAdminReq(\'' + it.requestId + '\',\'approve\')">✅ อนุมัติ</button><button type="button" class="mini-button danger" onclick="reviewAdminReq(\'' + it.requestId + '\',\'reject\')">❌ ตีกลับ</button></div>' : '';
+      var waitNote = (!d.isOwner && it.status === 'pending') ? '<div style="font-size:13px">รอ ' + v8esc(d.ownerEmail || '') + ' อนุมัติ</div>' : '';
+      return '<div class="pending-card" id="admreq-' + it.requestId + '"><div><b>' + v8esc(it.email) + '</b> (' + v8esc(it.name || '-') + ') · ' + st + '</div><div style="color:#5d6785;font-size:13.5px">ขอโดย: ' + v8esc(it.requestedBy || '') + '</div>' + waitNote + btns + '</div>';
+    }).join('');
+  }catch(e){ box.innerHTML = '<p class="house-map-help">เชื่อมต่อไม่ได้</p>'; }
+};
+window.reviewAdminReq = async function(requestId, decision){
+  var a = adminAuth();
+  if(!a) return;
+  if(!confirm((decision === 'approve' ? 'อนุมัติแอดมินคำขอ ' + requestId + ' ?' : 'ตีกลับคำขอ ' + requestId + ' ?'))) return;
+  setAdminMsg('กำลังดำเนินการ…');
+  try{
+    var res = await fetch(GAS_URL, {method:'POST', body: JSON.stringify({action:'reviewAdmin', adminEmail: a.email, passcode: a.pass, requestId: requestId, decision: decision})});
+    var result = JSON.parse(await res.text());
+    if(result && result.status === 'success'){ setAdminMsg('✅ ' + (result.message || 'เรียบร้อย')); loadAdminRequests(); }
+    else setAdminMsg('❌ ' + ((result && result.message) || 'ไม่สำเร็จ'));
   }catch(e){ setAdminMsg('เชื่อมต่อไม่ได้'); }
 };
 window.loadMyRequests = async function(){
@@ -4804,3 +4856,5 @@ document.addEventListener('change', function(e){
 updateOutboxBadge();
 
 </script>
+
+
